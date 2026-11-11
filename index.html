@@ -1,0 +1,1922 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>浏览器指纹与真实参数报告</title>
+<style>
+:root{
+  --bg:#070b10;--card:#0f1620;--line:#1e2b3a;--text:#e6eef8;--muted:#8ba1b8;
+  --accent:#38bdf8;--accent2:#a78bfa;--ok:#34d399;--no:#f87171;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{
+  margin:0;color:var(--text);line-height:1.55;
+  background:radial-gradient(1200px 600px at 15% -10%,rgba(18,58,90,.45),transparent 60%),var(--bg);
+  font-family:"Segoe UI",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 16px 64px}
+.hero{border:1px solid var(--line);border-radius:20px;padding:20px 20px 16px;background:linear-gradient(160deg,#0c1926,#0a1119 70%);margin-bottom:14px}
+.eyebrow{font-size:11px;letter-spacing:.2em;color:var(--accent)}
+h1{font-size:clamp(21px,3vw,32px);margin:4px 0 6px;line-height:1.25}
+.lead{color:var(--muted);font-size:13px;margin:0 0 14px;max-width:900px}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+button{font:inherit;color:#dff3ff;background:#10283a;border:1px solid #1d4a66;border-radius:9px;padding:7px 12px;cursor:pointer;font-size:12.5px}
+button:hover{border-color:var(--accent);color:#fff}
+button.copy{background:transparent;border-color:var(--line);color:var(--muted);padding:2px 8px;font-size:11px;margin-left:8px}
+button.copy:hover{color:var(--accent);border-color:var(--accent)}
+.hash-panel{display:grid;gap:9px;margin:6px 0 14px}
+.hash-block{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#09111a;border:1px solid #17283a;border-radius:12px;padding:10px 12px}
+.hash-block.primary{border-color:#1b5a7a;background:linear-gradient(90deg,#0a1c2a,#09111a)}
+.hash-label{font-size:11.5px;color:var(--muted);min-width:196px}
+.hash-block code{font-family:var(--mono);font-size:12px;color:#7fe3ff;word-break:break-all;flex:1 1 240px;min-width:0;white-space:normal}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));gap:9px;margin:14px 0 10px}
+.stat{background:#0c141d;border:1px solid #172434;border-radius:11px;padding:9px 11px;min-width:0}
+.stat b{display:block;font-size:10.5px;color:var(--muted);font-weight:500;margin-bottom:2px}
+.stat span{font-size:12.5px;word-break:break-word}
+.mini{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.mini .chip{font-family:var(--mono);font-size:11px}
+.legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:11.5px;margin:0 4px 8px}
+.legend .chip{font-size:11px}
+.card{background:linear-gradient(180deg,#0f1822,#0c141d);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:12px 0}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card h2{font-size:15.5px;margin:0;letter-spacing:.01em}
+.desc{color:var(--muted);font-size:12px;margin:3px 0 12px}
+.badge{font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.pending{color:var(--accent);border-color:#1d4a66}
+.placeholder{color:var(--muted);font-size:12.5px;padding:10px 0 4px}
+.row{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr) minmax(110px,190px);gap:12px;padding:7px 0;border-top:1px dashed #16222f;align-items:start}
+.row:first-child{border-top:0}
+.row.wide{grid-template-columns:minmax(150px,220px) minmax(0,1fr)}
+.row .k{color:#c3d4e6;font-size:13px;word-break:break-word}
+.row .k .src{color:#6f8ba6;font-size:10.5px;font-family:var(--mono);margin-top:2px}
+.row .src{color:#6f8ba6;font-size:10.5px;font-family:var(--mono);word-break:break-word;text-align:right}
+.v{font-size:13px;word-break:break-word;white-space:pre-wrap;font-family:var(--mono)}
+.mono{font-family:var(--mono)}
+.muted{color:#6f8ba6;font-size:12px}
+pre.json{margin:0;padding:9px 11px;background:#09111a;border:1px solid #16222f;border-radius:8px;font-family:var(--mono);font-size:11.5px;color:#b9d6ee;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#0d1a26;border:1px solid #1a2c3e;border-radius:7px;padding:2px 7px;font-size:11.5px;color:#cfe6f8;word-break:break-word}
+.chip .copy{margin-left:2px}
+.fgrid{display:flex;flex-wrap:wrap;gap:6px}
+.fgrid .chip.ok{border-color:#1d5140;background:#0a2019;color:#a7f3d0}
+.fgrid .chip.no{border-color:#4a2226;background:#1c0f12;color:#fca5a5}
+.fgrid .chip b{font-weight:600;margin-left:2px}
+.notes{margin:10px 0 0;padding-left:18px;color:#a9bfd3;font-size:12.5px}
+.notes li{margin:4px 0}
+footer{color:#5f7891;font-size:11.5px;text-align:center;margin-top:26px;line-height:1.7}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#0e2536;border:1px solid #1d5a7a;color:#dff3ff;padding:8px 16px;border-radius:999px;font-size:12.5px;opacity:0;pointer-events:none;transition:.2s;z-index:99}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:760px){
+  .row{grid-template-columns:1fr;gap:3px;padding:9px 0}
+  .row .src{text-align:left}
+  .hash-block{display:block}
+  .hash-label{display:block;width:auto;min-width:0;margin-bottom:4px}
+  .hash-block code{display:block;width:auto;margin:0 0 6px}
+  .mini .chip{flex:1 1 100%;justify-content:space-between}
+  .wrap{padding:16px 10px 48px}
+  .card{padding:14px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="hero"></div>
+  <div class="legend">
+    <span>来源标记：</span>
+    <span class="chip">实测 · 直接调用浏览器 API</span>
+    <span class="chip">解析 · 从 UA / UA-CH 字符串提取</span>
+    <span class="chip">推断 · 基于多个真实值推导</span>
+    <span class="chip">第三方 · 外部接口返回值</span>
+  </div>
+  <div id="sections"></div>
+  <footer>
+    本页为纯静态页面，无后端；除“公网 IP”模块会向 api.ipify.org / api64.ipify.org / ipwho.is / ipinfo.io 发起请求外，采集数据不上传任何服务器。<br>
+    指纹哈希仅用于本页内比对。页面由 GitHub Pages 托管。
+  </footer>
+</div>
+<div id="toast" class="toast"></div>
+<noscript><p style="color:#f87171;padding:20px">本页需要启用 JavaScript 才能采集参数。</p></noscript>
+<script>
+(() => {
+'use strict';
+
+const $ = (s, r = document) => r.querySelector(s);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeBool = (fn) => { try { return !!fn(); } catch (e) { return false; } };
+
+const FONT_LIST = [
+  'Arial','Arial Black','Arial Narrow','Arial Rounded MT Bold','Bahnschrift','Baskerville','Bookman Old Style',
+  'Calibri','Cambria','Candara','Century Gothic','Comic Sans MS','Consolas','Constantia','Corbel','Courier New',
+  'DejaVu Sans','DejaVu Sans Mono','DejaVu Serif','Didot','Franklin Gothic Medium','Futura','Garamond','Geneva',
+  'Georgia','Gill Sans','Helvetica','Helvetica Neue','Impact','Liberation Mono','Liberation Sans','Liberation Serif',
+  'Lucida Console','Lucida Grande','Lucida Sans Unicode','Menlo','Monaco','MS Gothic','MS PGothic','MS Sans Serif',
+  'MS Serif','Nimbus Roman','Nimbus Sans','Optima','Palatino','Palatino Linotype','Roboto','Roboto Mono',
+  'Segoe Print','Segoe Script','Segoe UI','Segoe UI Emoji','SF Pro Display','SF Pro Text','SF Mono','San Francisco',
+  'Tahoma','Times','Times New Roman','Trebuchet MS','Ubuntu','Ubuntu Mono','Verdana','Webdings','Wingdings',
+  'Cantarell','Noto Sans','Noto Serif','Noto Sans Mono','Fira Sans','Fira Code','Open Sans','Lato','Montserrat','Inter',
+  'JetBrains Mono','Source Code Pro','Cascadia Code','Apple Color Emoji','Apple Symbols','Avenir','Avenir Next',
+  'Cochin','Copperplate','Marker Felt','Papyrus','Skia','Droid Sans','Droid Sans Fallback','Droid Serif',
+  'Microsoft YaHei','Microsoft JhengHei','SimSun','NSimSun','SimHei','FangSong','KaiTi','MingLiU','PMingLiU',
+  'PingFang SC','PingFang TC','PingFang HK','Hiragino Sans GB','Heiti SC','Songti SC','Kaiti SC','STHeiti','STSong',
+  'STKaiti','Noto Sans CJK SC','Noto Serif CJK SC','Source Han Sans SC','Source Han Serif SC','WenQuanYi Micro Hei',
+  'WenQuanYi Zen Hei'
+];
+
+const SEC_DEFS = [
+  { id: 'browser', title: '浏览器与内核', desc: 'User-Agent、Client Hints 高熵值、UA 解析结果、渲染引擎与内核版本；每行注明是直接读取还是解析。' },
+  { id: 'hardware', title: '系统 / 硬件 / 电池', desc: '操作系统、CPU 架构与位数、核心数、设备内存、触点数、电池与手柄状态。' },
+  { id: 'screen', title: '屏幕、视口与媒体特性', desc: '屏幕尺寸、可用区域、DPR、视觉视口、CSS 单位实测值、媒体查询匹配结果。' },
+  { id: 'locale', title: '语言、时区与数字格式', desc: 'Intl 解析出的区域、日历、时区、夏令时、日期/数字/货币格式与排序规则。' },
+  { id: 'graphics', title: '图形：WebGL / WebGPU', desc: 'WebGL 厂商、渲染器、全部可读参数、扩展列表、着色器精度；WebGPU 适配器信息与限制。' },
+  { id: 'hashes', title: '指纹哈希（SHA-256）', desc: 'Canvas 绘制、音频渲染、WebGL 参数、字体列表、布局几何与综合指纹；全部在本地计算。' },
+  { id: 'fonts', title: '字体检测', desc: '通过 Canvas 文本宽度差异实测系统字体是否可用；只能判断疑似安装，不能判断字体版本。' },
+  { id: 'audio', title: '音频与语音', desc: 'AudioContext 实际参数、OfflineAudioContext 渲染结果、语音合成 voices。' },
+  { id: 'media', title: '媒体设备与编解码', desc: '摄像头/麦克风/扬声器枚举、支持约束、视频音频编解码与 MediaRecorder 支持情况。' },
+  { id: 'network', title: '网络', desc: 'Connection API、在线状态、HTTP 协议版本，以及公网出口（第三方接口，失败会如实显示）。' },
+  { id: 'storage', title: '存储与 Cookie', desc: 'localStorage / sessionStorage / Cookie / IndexedDB 实测可用性、配额与持久化状态。' },
+  { id: 'permissions', title: '权限状态', desc: '逐项查询浏览器权限状态（granted / denied / prompt）；查询失败会标注原因。' },
+  { id: 'features', title: 'API 与特性支持', desc: '逐项检测浏览器 API 是否存在（实测），✗ 表示当前浏览器未暴露该接口。' },
+  { id: 'css', title: 'CSS 能力检测', desc: 'CSS.supports 实测当前浏览器支持的布局、选择器、颜色与动画特性。' },
+  { id: 'plugins', title: '插件与 MIME 类型', desc: 'navigator.plugins / mimeTypes 的实际返回值；现代 Chromium 返回的是内置 PDF 插件列表。' },
+  { id: 'webrtc', title: 'WebRTC 候选地址', desc: '未配置 STUN/TURN 时的本地 ICE 候选；现代浏览器通常用 mDNS 隐藏真实内网 IP。' },
+  { id: 'page', title: '页面与性能', desc: '文档信息、安全上下文、导航时序、HTTP 协议版本、JS 堆内存与用户激活状态。' },
+  { id: 'privacy', title: '隐私与自动化信号', desc: 'Do Not Track、GPC、WebDriver、浏览器专属对象、Brave 检测、Cookie 弃用标签。' },
+  { id: 'limits', title: '限制与说明', desc: '纯静态页面无法获取的项目，以及各项数据的来源与可信边界。' }
+];
+
+const STATE = new Map();
+SEC_DEFS.forEach((d) => STATE.set(d.id, { ...d, rows: [], notes: [], done: false }));
+
+const META = {
+  schema: 'browser-fingerprint-report/1',
+  generatedAt: null,
+  pageUrl: null,
+  referrer: null,
+  userAgent: null,
+  durationMs: null,
+  startedAt: 0
+};
+
+const SUMMARY = {
+  browser: '—', engine: '—', os: '—', device: '—',
+  screen: '—', tz: '—', lang: '—', duration: '—',
+  hashes: { stable: null, composite: null, canvas: null, audio: null, webgl: null, fonts: null, layout: null }
+};
+
+const FP = {};
+let uaHigh = null;
+
+async function sha256(input) {
+  try {
+    const data = typeof input === 'string' ? new TextEncoder().encode(input) : input;
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) {
+    return '不可用（' + (e.name || 'Error') + '）';
+  }
+}
+
+function plain(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number' && !Number.isFinite(v)) return String(v);
+  if (typeof v === 'bigint') return String(v);
+  if (ArrayBuffer.isView(v)) return Array.from(v);
+  if (v instanceof Set) return Array.from(v);
+  if (Array.isArray(v)) return v.map(plain);
+  if (typeof v === 'object') {
+    const o = {};
+    for (const k of Object.keys(v)) o[k] = plain(v[k]);
+    return o;
+  }
+  return v;
+}
+
+function add(secId, label, value, source, opts) {
+  const st = STATE.get(secId);
+  if (!st) return null;
+  const row = { label, value, source, ...(opts || {}) };
+  st.rows.push(row);
+  scheduleRender();
+  return row;
+}
+
+function setRow(row, value, source) {
+  if (!row) return;
+  row.value = value;
+  if (source) row.source = source;
+  scheduleRender();
+}
+
+function addNote(secId, text) {
+  const st = STATE.get(secId);
+  if (st) { st.notes.push(text); scheduleRender(); }
+}
+
+let rafId = 0;
+function scheduleRender() {
+  if (rafId) return;
+  rafId = requestAnimationFrame(() => { rafId = 0; render(); });
+}
+
+function fmtValue(v, row) {
+  if (row && row.type === 'features') {
+    const items = Array.isArray(v) ? v : [];
+    if (!items.length) return '<span class="muted">（无）</span>';
+    return '<div class="fgrid">' + items.map((it) =>
+      `<span class="chip ${it.ok ? 'ok' : 'no'}" title="${esc(it.expr || it.name)}">${esc(it.name)}<b>${it.ok ? '✓' : '✗'}</b></span>`
+    ).join('') + '</div>';
+  }
+  if (v === null || v === undefined) return '<span class="muted">不可用（接口未返回）</span>';
+  if (ArrayBuffer.isView(v)) v = Array.from(v);
+  if (Array.isArray(v)) {
+    if (!v.length) return '<span class="muted">（空）</span>';
+    const simple = v.every((x) => x === null || typeof x !== 'object');
+    if (simple) return '<span class="chips">' + v.map((x) => `<span class="chip">${esc(x === null ? 'null' : String(x))}</span>`).join('') + '</span>';
+    return `<pre class="json">${esc(JSON.stringify(v, null, 2))}</pre>`;
+  }
+  if (typeof v === 'object') return `<pre class="json">${esc(JSON.stringify(v, null, 2))}</pre>`;
+  if (v === '') return '<span class="muted">（空字符串）</span>';
+  const text = String(v);
+  if (row && row.copy) {
+    return `<span class="v mono">${esc(text)}</span><button class="copy" data-copy="${esc(text)}">复制</button>`;
+  }
+  return `<span class="v">${esc(text)}</span>`;
+}
+
+function renderHero() {
+  const h = SUMMARY.hashes;
+  const stats = [
+    ['浏览器', SUMMARY.browser],
+    ['内核 / 引擎', SUMMARY.engine],
+    ['操作系统', SUMMARY.os],
+    ['设备类型', SUMMARY.device],
+    ['屏幕', SUMMARY.screen],
+    ['时区', SUMMARY.tz],
+    ['语言', SUMMARY.lang],
+    ['采集耗时', SUMMARY.duration]
+  ];
+  const minis = [
+    ['Canvas', h.canvas],
+    ['Audio', h.audio],
+    ['WebGL', h.webgl],
+    ['Fonts', h.fonts],
+    ['Layout', h.layout]
+  ].filter((x) => x[1]);
+
+  const hashBlock = (label, hash, primary) => {
+    const shown = hash || '计算中…';
+    return `<div class="hash-block${primary ? ' primary' : ''}">
+      <span class="hash-label">${esc(label)}</span>
+      <code>${esc(shown)}</code>
+      ${hash ? `<button class="copy" data-copy="${esc(hash)}">复制</button>` : ''}
+    </div>`;
+  };
+
+  $('#hero').innerHTML = `
+    <div class="hero">
+      <div class="eyebrow">BROWSER FINGERPRINT · REAL VALUES ONLY</div>
+      <h1>浏览器指纹与真实参数报告</h1>
+      <p class="lead">打开即自动采集。每一项都来自当前浏览器的实际接口返回值，逐行标注来源；接口不存在或读取失败会明确写出“不可用”，不做推测填充。页面为纯静态，无后端。</p>
+      <div class="hero-actions">
+        <button id="btn-copy-all">复制全部 JSON</button>
+        <button id="btn-download">下载 JSON 文件</button>
+        <button id="btn-reload">重新采集</button>
+      </div>
+      <div class="hash-panel">
+        ${hashBlock('稳定设备指纹 · SHA-256', h.stable, true)}
+        ${hashBlock('综合指纹（含 UA 版本）· SHA-256', h.composite, false)}
+      </div>
+      <div class="stats">
+        ${stats.map(([k, v]) => `<div class="stat"><b>${esc(k)}</b><span>${esc(v || '—')}</span></div>`).join('')}
+      </div>
+      <div class="mini">
+        ${minis.map(([k, v]) => `<span class="chip mono" title="${esc(v)}">${esc(k)} ${esc(v.slice(0, 12))}…<button class="copy" data-copy="${esc(v)}">复制</button></span>`).join('')}
+      </div>
+      <div class="muted" style="margin-top:10px">生成时间：${esc(new Date().toLocaleString())} · 采集开始于页面加载</div>
+    </div>`;
+}
+
+function renderSections() {
+  const host = $('#sections');
+  host.innerHTML = SEC_DEFS.map((def) => {
+    const st = STATE.get(def.id);
+    const rows = st.rows;
+    const badge = st.done
+      ? (rows.length ? `${rows.length} 行` : (st.notes.length ? `${st.notes.length} 条说明` : '无数据'))
+      : '采集中';
+    if (!rows.length && !st.done) {
+      return `<section class="card" id="sec-${def.id}">
+        <div class="card-head"><h2>${esc(def.title)}</h2><span class="badge pending">${esc(badge)}</span></div>
+        <p class="desc">${esc(def.desc)}</p>
+        <div class="placeholder">正在调用浏览器接口…</div>
+      </section>`;
+    }
+    const body = rows.map((r) => {
+      if (r.type === 'features') {
+        return `<div class="row wide"><div class="k">${esc(r.label)}<div class="src">${esc(r.source)}</div></div><div class="vcell">${fmtValue(r.value, r)}</div></div>`;
+      }
+      return `<div class="row"><div class="k">${esc(r.label)}</div><div class="vcell">${fmtValue(r.value, r)}</div><div class="src">${esc(r.source)}</div></div>`;
+    }).join('');
+    const empty = (st.done && !rows.length) ? '<div class="placeholder">当前浏览器未返回该组数据。</div>' : '';
+    const notes = st.notes.length ? `<ul class="notes">${st.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
+    return `<section class="card" id="sec-${def.id}">
+      <div class="card-head"><h2>${esc(def.title)}</h2><span class="badge done">${esc(badge)}</span></div>
+      <p class="desc">${esc(def.desc)}</p>
+      <div class="rows">${body}</div>${empty}${notes}
+    </section>`;
+  }).join('');
+}
+
+function render() {
+  renderHero();
+  renderSections();
+}
+
+function buildReport() {
+  return {
+    schema: META.schema,
+    meta: {
+      generatedAt: META.generatedAt,
+      pageUrl: META.pageUrl,
+      referrer: META.referrer,
+      userAgent: navigator.userAgent,
+      durationMs: META.durationMs,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      languages: navigator.languages
+    },
+    summary: plain(SUMMARY),
+    sections: SEC_DEFS.map((def) => {
+      const st = STATE.get(def.id);
+      return {
+        id: def.id,
+        title: def.title,
+        description: def.desc,
+        rows: st.rows.map((r) => ({
+          label: r.label,
+          value: plain(r.value),
+          source: r.source,
+          type: r.type || 'value'
+        })),
+        notes: st.notes
+      };
+    })
+  };
+}
+
+function showToast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('已复制到剪贴板');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    ta.remove();
+    showToast(ok ? '已复制到剪贴板' : '复制失败，请手动选择文本');
+  }
+}
+
+async function copyAll() {
+  await copyText(JSON.stringify(buildReport(), null, 2));
+}
+
+function downloadJSON() {
+  const blob = new Blob([JSON.stringify(buildReport(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  a.href = URL.createObjectURL(blob);
+  a.download = `browser-fingerprint-${ts}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  showToast('已生成 JSON 文件');
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  if (btn.id === 'btn-copy-all') { copyAll(); return; }
+  if (btn.id === 'btn-download') { downloadJSON(); return; }
+  if (btn.id === 'btn-reload') { location.reload(); return; }
+  if (btn.dataset.copy !== undefined) { copyText(btn.dataset.copy); }
+});
+
+async function run(name, fn) {
+  try {
+    await fn();
+  } catch (e) {
+    add('limits', '采集异常 · ' + name, (e && e.name ? e.name + ': ' : '') + (e && e.message ? e.message : String(e)), '运行时异常');
+  }
+}
+
+function runSync(name, fn) {
+  try {
+    fn();
+  } catch (e) {
+    add('limits', '采集异常 · ' + name, (e && e.name ? e.name + ': ' : '') + (e && e.message ? e.message : String(e)), '运行时异常');
+  }
+}
+
+function parseBrowserTokens(ua) {
+  const list = [];
+  const push = (name, version) => { if (version) list.push({ name, version }); };
+  let m;
+  if ((m = ua.match(/\bEdg(?:A|iOS)?\/([\d.]+)/))) push('Microsoft Edge', m[1]);
+  if ((m = ua.match(/\bEdge\/([\d.]+)/))) push('Microsoft Edge (Legacy)', m[1]);
+  if ((m = ua.match(/\b(?:OPR|OPiOS)\/([\d.]+)/))) push('Opera', m[1]);
+  if ((m = ua.match(/\bSamsungBrowser\/([\d.]+)/))) push('Samsung Internet', m[1]);
+  if ((m = ua.match(/\bUCBrowser\/([\d.]+)/))) push('UC Browser', m[1]);
+  if ((m = ua.match(/\bQQBrowser\/([\d.]+)/))) push('QQ Browser', m[1]);
+  if ((m = ua.match(/\bQuark\/([\d.]+)/))) push('Quark', m[1]);
+  if ((m = ua.match(/\bMiuiBrowser\/([\d.]+)/))) push('Miui Browser', m[1]);
+  if ((m = ua.match(/\bHuaweiBrowser\/([\d.]+)/))) push('Huawei Browser', m[1]);
+  if ((m = ua.match(/\bVivaldi\/([\d.]+)/))) push('Vivaldi', m[1]);
+  if ((m = ua.match(/\bBrave\/([\d.]+)/))) push('Brave', m[1]);
+  if ((m = ua.match(/\bElectron\/([\d.]+)/))) push('Electron', m[1]);
+  if ((m = ua.match(/\bArkWeb\/([\d.]+)/))) push('ArkWeb', m[1]);
+  if ((m = ua.match(/\bMicroMessenger\/([\d.]+)/))) push('微信内置浏览器', m[1]);
+  if ((m = ua.match(/\bQQ\/([\d.]+)/))) push('QQ 内置浏览器', m[1]);
+  if ((m = ua.match(/\bWeibo\/([\d.]+)/))) push('微博内置浏览器', m[1]);
+  if ((m = ua.match(/\baweme\/([\d.]+)/i))) push('抖音内置浏览器', m[1]);
+  if ((m = ua.match(/\bAlipayClient\/([\d.]+)/))) push('支付宝内置浏览器', m[1]);
+  if ((m = ua.match(/\b(?:baidubrowser|baiduboxapp)[\/ ]?([\d.]*)/i))) push('百度', m[1] || '');
+  if ((m = ua.match(/\b(?:Firefox|FxiOS)\/([\d.]+)/))) push('Firefox', m[1]);
+  if ((m = ua.match(/\b(?:Chrome|CriOS|CrMo)\/([\d.]+)/))) push('Chrome', m[1]);
+  else if ((m = ua.match(/\bChromium\/([\d.]+)/))) push('Chromium', m[1]);
+  const safariGuard = !/Chrome|Chromium|CriOS|Edg\/|OPR\/|OPiOS|UCBrowser|Quark|SamsungBrowser|MiuiBrowser|HuaweiBrowser|MicroMessenger|QQBrowser|baidubrowser|baiduboxapp/i.test(ua);
+  if (safariGuard && (m = ua.match(/\bVersion\/([\d.]+).*Safari\//))) push('Safari', m[1]);
+  return list;
+}
+
+function pickBrowser(tokens, hints) {
+  if (hints && Array.isArray(hints.fullVersionList)) {
+    const brands = hints.fullVersionList.filter((b) => !/not[.\s]?a[\/ ]?brand/i.test(b.brand));
+    const order = ['Microsoft Edge', 'Opera', 'Brave', 'Google Chrome', 'Chromium'];
+    for (const name of order) {
+      const b = brands.find((x) => x.brand === name);
+      if (b) return `${name === 'Google Chrome' ? 'Chrome' : name} ${b.version}`;
+    }
+  }
+  const priority = ['Microsoft Edge', 'Microsoft Edge (Legacy)', 'Opera', 'Samsung Internet', 'UC Browser', 'QQ Browser', 'Quark', 'Miui Browser', 'Huawei Browser', 'Brave', 'Vivaldi', 'Firefox', 'Chrome', 'Chromium', 'Safari'];
+  for (const name of priority) {
+    const t = tokens.find((x) => x.name === name);
+    if (t) return `${name} ${t.version}`;
+  }
+  return tokens.length ? `${tokens[0].name} ${tokens[0].version}`.trim() : '未识别';
+}
+
+function detectEngine(ua, maxTouch, hints) {
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && maxTouch > 1);
+  const appleWebKit = ua.match(/AppleWebKit\/([\d.]+)/);
+  const firefox = ua.match(/\bFirefox\/([\d.]+)/);
+  const chromiumFull = (hints && hints.uaFullVersion)
+    || (hints && Array.isArray(hints.fullVersionList) ? ((hints.fullVersionList.find((b) => b.brand === 'Google Chrome' || b.brand === 'Chromium') || {}).version || null) : null);
+  const chromiumUA = ua.match(/\b(?:Chrome|Chromium|CriOS)\/([\d.]+)/);
+
+  if (/Trident\/|MSIE /.test(ua)) {
+    const v = ua.match(/Trident\/([\d.]+)/);
+    return { name: 'Trident', version: v ? v[1] : '', detail: `Trident ${v ? v[1] : '（版本未知）'}（IE 内核）`, short: `Trident ${v ? v[1] : ''}`.trim(), basis: '解析 · UA 含 Trident/MSIE 标记' };
+  }
+  if (/\bEdge\//.test(ua) && !/\bEdg\//.test(ua)) {
+    const v = ua.match(/\bEdge\/([\d.]+)/);
+    return { name: 'EdgeHTML', version: v[1], detail: `EdgeHTML ${v[1]}（旧版 Edge）`, short: `EdgeHTML ${v[1]}`, basis: '解析 · UA 含 Edge/ 标记' };
+  }
+  if (isIOS) {
+    const v = appleWebKit ? appleWebKit[1] : '';
+    return { name: 'WebKit', version: v, detail: `WebKit（AppleWebKit ${v || '版本未知'}）`, short: `WebKit ${v}`.trim(), basis: '推断 · iOS/iPadOS 上浏览器受系统限制使用 WebKit（依据平台）' };
+  }
+  if (firefox) {
+    return { name: 'Gecko', version: firefox[1], detail: `Gecko ${firefox[1]}（Firefox 内核）`, short: `Gecko ${firefox[1]}`, basis: '解析 · UA 含 Firefox 与 Gecko 标记' };
+  }
+  if (chromiumFull || chromiumUA) {
+    const v = chromiumFull || chromiumUA[1];
+    const reduced = /\.0\.0\.0$/.test(chromiumUA ? chromiumUA[1] : '');
+    return {
+      name: 'Blink', version: v,
+      detail: `Blink（Chromium ${v}）`,
+      short: `Blink / Chromium ${v}`,
+      basis: chromiumFull ? 'UA-CH 高熵值（精确版本）' : `解析 · UA Chrome token（${reduced ? '版本号被浏览器简化' : '完整版本'}）`
+    };
+  }
+  if (/\bEdg\//.test(ua) || /\bOPR\//.test(ua)) {
+    const v = (chromiumUA && chromiumUA[1]) || '';
+    return { name: 'Blink', version: v, detail: `Blink（Chromium ${v || '版本未知'}）`, short: `Blink / Chromium ${v}`.trim(), basis: '解析 · UA 品牌标记' };
+  }
+  if (appleWebKit) {
+    const v = appleWebKit[1];
+    return { name: 'WebKit', version: v, detail: `WebKit（AppleWebKit ${v}）`, short: `WebKit ${v}`, basis: '解析 · UA 含 AppleWebKit 且无 Chrome/Firefox 标记' };
+  }
+  return { name: '未知', version: '', detail: '未能从 UA 判定渲染引擎', short: '未知', basis: '解析 · 无匹配令牌' };
+}
+
+function parseOS(ua, maxTouch) {
+  const touch = (typeof maxTouch === 'number') ? maxTouch : navigator.maxTouchPoints;
+  let m;
+  if ((m = ua.match(/HarmonyOS[\/ ]?([\d.]+)?/i))) {
+    return { display: `HarmonyOS ${m[1] || '（版本未提供）'}`, short: 'HarmonyOS', basis: '解析 · UA 含 HarmonyOS 标记' };
+  }
+  if (/OpenHarmony/.test(ua)) {
+    return { display: 'OpenHarmony', short: 'OpenHarmony', basis: '解析 · UA 含 OpenHarmony 标记' };
+  }
+  if ((m = ua.match(/Windows NT ([\d.]+)/))) {
+    const map = {
+      '10.0': 'Windows 10 / 11（UA 均为 NT 10.0，无法区分）',
+      '6.3': 'Windows 8.1', '6.2': 'Windows 8', '6.1': 'Windows 7',
+      '6.0': 'Windows Vista', '5.1': 'Windows XP'
+    };
+    return { display: map[m[1]] || `Windows NT ${m[1]}`, short: 'Windows', basis: '解析 · UA 的 Windows NT 版本令牌' };
+  }
+  if ((m = ua.match(/Android\s?([\d.]+)/))) {
+    return { display: `Android ${m[1]}`, short: `Android ${m[1]}`, basis: '解析 · UA 含 Android 版本' };
+  }
+  if ((m = ua.match(/(?:iPhone|iPad|iPod).*?OS (\d+)[._](\d+)(?:[._](\d+))?/))) {
+    const v = [m[1], m[2], m[3]].filter(Boolean).join('.');
+    return { display: `iOS / iPadOS ${v}`, short: `iOS ${v}`, basis: '解析 · UA 含 iPhone/iPad OS 版本' };
+  }
+  if (/Macintosh/.test(ua) && touch > 1) {
+    return { display: 'iPadOS（桌面站点模式 UA 伪装为 Macintosh，依据触点数推断）', short: 'iPadOS', basis: '推断 · Macintosh UA + maxTouchPoints > 1' };
+  }
+  if ((m = ua.match(/Mac OS X (\d+)[._](\d+)(?:[._](\d+))?/))) {
+    const v = [m[1], m[2], m[3]].filter(Boolean).join('.');
+    return { display: `macOS ${v}`, short: `macOS ${v}`, basis: '解析 · UA 含 Mac OS X 版本' };
+  }
+  if ((m = ua.match(/CrOS \S+ ([\d.]+)/))) {
+    return { display: `ChromeOS ${m[1]}`, short: 'ChromeOS', basis: '解析 · UA 含 CrOS 标记' };
+  }
+  if (/Ubuntu/.test(ua)) return { display: 'Ubuntu Linux', short: 'Ubuntu', basis: '解析 · UA 含 Ubuntu 标记' };
+  if (/Linux/.test(ua)) return { display: 'Linux', short: 'Linux', basis: '解析 · UA 含 Linux 标记' };
+  return { display: '未能从 UA 判定', short: '未知', basis: '解析 · 无匹配令牌' };
+}
+
+async function collectBrowser() {
+  const ua = navigator.userAgent;
+  META.userAgent = ua;
+  add('browser', 'User-Agent', ua, 'navigator.userAgent');
+  add('browser', 'UA 字符串长度', ua.length, '实测');
+  add('browser', 'appName', navigator.appName, 'navigator.appName');
+  add('browser', 'appVersion', navigator.appVersion, 'navigator.appVersion');
+  add('browser', 'appCodeName', navigator.appCodeName, 'navigator.appCodeName');
+  add('browser', 'product', navigator.product, 'navigator.product');
+  add('browser', 'productSub', navigator.productSub, 'navigator.productSub');
+  add('browser', 'vendor', navigator.vendor, 'navigator.vendor');
+  add('browser', 'vendorSub', navigator.vendorSub, 'navigator.vendorSub');
+  add('browser', 'platform（旧字段）', navigator.platform, 'navigator.platform');
+  add('browser', 'pdfViewerEnabled', navigator.pdfViewerEnabled === undefined ? '不可用' : navigator.pdfViewerEnabled, 'navigator.pdfViewerEnabled');
+  add('browser', 'webdriver', navigator.webdriver, 'navigator.webdriver');
+
+  const uad = navigator.userAgentData;
+  if (!uad) {
+    add('browser', 'User-Agent Client Hints', '不可用', 'navigator.userAgentData 不存在');
+  } else {
+    add('browser', 'UA-CH 品牌（brands）', (uad.brands || []).map((b) => `${b.brand} ${b.version}`), 'navigator.userAgentData.brands');
+    add('browser', 'UA-CH mobile', uad.mobile, 'navigator.userAgentData.mobile');
+    add('browser', 'UA-CH platform', uad.platform, 'navigator.userAgentData.platform');
+    try {
+      uaHigh = await uad.getHighEntropyValues([
+        'architecture', 'bitness', 'model', 'platformVersion',
+        'uaFullVersion', 'fullVersionList', 'wow64', 'formFactors'
+      ]);
+      add('browser', 'UA-CH fullVersionList', (uaHigh.fullVersionList || []).map((b) => `${b.brand} ${b.version}`), 'getHighEntropyValues(["fullVersionList"])');
+      add('browser', 'UA-CH uaFullVersion', uaHigh.uaFullVersion || '不可用', 'getHighEntropyValues(["uaFullVersion"])');
+    } catch (e) {
+      add('browser', 'UA-CH 高熵值', '读取失败：' + (e.name || 'Error'), 'getHighEntropyValues() 异常');
+    }
+  }
+
+  const tokens = parseBrowserTokens(ua);
+  add('browser', 'UA 中识别到的浏览器/应用', tokens.length ? tokens.map((t) => `${t.name} ${t.version}`.trim()) : ['未识别'], '解析 · userAgent');
+
+  const engine = detectEngine(ua, navigator.maxTouchPoints, uaHigh);
+  add('browser', '渲染引擎', engine.detail, engine.basis);
+  add('browser', '内核版本', engine.version || '未能单独判定', engine.basis);
+  add('browser', '浏览器品牌/版本', pickBrowser(tokens, uaHigh), '综合 UA-CH 与 UA 解析');
+
+  const wv = [];
+  if (/;\s*wv\)/.test(ua)) wv.push('UA 含 "; wv)"');
+  if (/Android/.test(ua) && /Version\/4\.0/.test(ua)) wv.push('Android + Version/4.0');
+  if (/\bwv\b/.test(ua)) wv.push('UA 含 wv 标记');
+  add('browser', 'Android WebView 判定', wv.length ? { likely: true, signals: wv } : { likely: false, signals: [] }, '推断 · UA 信号组合');
+
+  const apps = [];
+  const appPatterns = [
+    ['微信', /MicroMessenger\/([\d.]+)/], ['QQ', /\bQQ\/([\d.]+)/], ['QQ 浏览器', /QQBrowser\/([\d.]+)/],
+    ['微博', /Weibo\/([\d.]+)/], ['抖音', /aweme\/([\d.]+)/i], ['支付宝', /AlipayClient\/([\d.]+)/],
+    ['百度', /(baidubrowser|baiduboxapp)[\/ ]?([\d.]*)/i], ['UC', /UCBrowser\/([\d.]+)/],
+    ['夸克', /Quark\/([\d.]+)/], ['小米浏览器', /MiuiBrowser\/([\d.]+)/], ['华为浏览器', /HuaweiBrowser\/([\d.]+)/],
+    ['三星浏览器', /SamsungBrowser\/([\d.]+)/], ['vivo 浏览器', /VivoBrowser\/([\d.]+)/],
+    ['OPPO 浏览器', /HeyTapBrowser\/([\d.]+)/], ['搜狗浏览器', /SogouMobileBrowser\/([\d.]+)/],
+    ['Electron', /Electron\/([\d.]+)/], ['Cordova', /Cordova/], ['Capacitor', /Capacitor/]
+  ];
+  for (const [name, re] of appPatterns) {
+    const m = ua.match(re);
+    if (m) apps.push(name + (m[1] ? ' ' + m[1] : ''));
+  }
+  add('browser', '应用内浏览器 / 容器', apps.length ? apps : ['未检测到已知应用容器标记'], '解析 · UA 标记匹配');
+
+  add('browser', 'window.chrome 对象', typeof window.chrome !== 'undefined', 'typeof window.chrome');
+  add('browser', 'window.chrome.runtime', !!(window.chrome && window.chrome.runtime), 'window.chrome.runtime');
+  add('browser', 'window.safari 对象', typeof window.safari !== 'undefined', 'typeof window.safari');
+  add('browser', 'window.opr 对象', typeof window.opr !== 'undefined', 'typeof window.opr');
+  add('browser', 'window.InstallTrigger', typeof window.InstallTrigger !== 'undefined', 'typeof window.InstallTrigger');
+  add('browser', 'navigator.brave 对象', !!navigator.brave, 'navigator.brave');
+
+  SUMMARY.browser = pickBrowser(tokens, uaHigh);
+  SUMMARY.engine = engine.short;
+}
+
+function collectHardware() {
+  const os = parseOS(navigator.userAgent, navigator.maxTouchPoints);
+  add('hardware', '操作系统', os.display, os.basis);
+  SUMMARY.os = os.short;
+
+  add('hardware', 'navigator.platform', navigator.platform, 'navigator.platform');
+  if (uaHigh) {
+    add('hardware', 'UA-CH platformVersion', uaHigh.platformVersion || '不可用', 'getHighEntropyValues(["platformVersion"])');
+    add('hardware', 'CPU 架构', uaHigh.architecture || '不可用', 'getHighEntropyValues(["architecture"])');
+    add('hardware', 'CPU 位数', uaHigh.bitness ? uaHigh.bitness + ' 位' : '不可用', 'getHighEntropyValues(["bitness"])');
+    add('hardware', 'WOW64', uaHigh.wow64 === undefined ? '不可用' : uaHigh.wow64, 'getHighEntropyValues(["wow64"])');
+    add('hardware', '设备型号 model', uaHigh.model || '（空字符串；桌面设备通常为空）', 'getHighEntropyValues(["model"])');
+    add('hardware', '设备形态 formFactors', (uaHigh.formFactors && uaHigh.formFactors.length) ? uaHigh.formFactors : '（空）', 'getHighEntropyValues(["formFactors"])');
+  }
+
+  add('hardware', 'navigator.hardwareConcurrency', navigator.hardwareConcurrency || '不可用', 'navigator.hardwareConcurrency');
+  add('hardware', 'navigator.deviceMemory (GB)', navigator.deviceMemory === undefined ? '不可用（该浏览器未暴露）' : navigator.deviceMemory, 'navigator.deviceMemory');
+  add('hardware', 'navigator.maxTouchPoints', navigator.maxTouchPoints, 'navigator.maxTouchPoints');
+  add('hardware', '粗指针 (pointer: coarse)', matchMedia('(pointer: coarse)').matches, 'matchMedia("(pointer: coarse)")');
+  add('hardware', '精细指针 (pointer: fine)', matchMedia('(pointer: fine)').matches, 'matchMedia("(pointer: fine)")');
+  add('hardware', '悬停能力 (hover: hover)', matchMedia('(hover: hover)').matches, 'matchMedia("(hover: hover)")');
+
+  const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : null;
+  if (pads === null) {
+    add('hardware', '游戏手柄', '不可用', 'navigator.getGamepads 不存在');
+  } else {
+    add('hardware', '已连接游戏手柄数量', pads.length, 'navigator.getGamepads()');
+    if (pads.length) {
+      add('hardware', '游戏手柄列表', pads.map((g) => ({ id: g.id, index: g.index, connected: g.connected, mapping: g.mapping, axes: g.axes.length, buttons: g.buttons.length })), 'navigator.getGamepads()');
+    }
+  }
+
+  const mobile = uaHigh ? uaHigh.mobile : (uadMobile());
+  if (mobile === true) SUMMARY.device = '移动设备（UA-CH mobile=true）';
+  else if (mobile === false) SUMMARY.device = '非移动设备（UA-CH mobile=false）';
+  else SUMMARY.device = navigator.maxTouchPoints > 1 ? '触屏设备（依据触点推断）' : '桌面设备（依据触点推断）';
+}
+
+function uadMobile() {
+  const uad = navigator.userAgentData;
+  return uad && typeof uad.mobile === 'boolean' ? uad.mobile : null;
+}
+
+async function collectBattery() {
+  if (!navigator.getBattery) {
+    add('hardware', '电池 API', '不可用', 'navigator.getBattery 不存在');
+    return;
+  }
+  try {
+    const b = await navigator.getBattery();
+    const num = (v) => Number.isFinite(v) ? v : '不可用（Infinity/未知）';
+    add('hardware', '电池充电状态', b.charging, 'BatteryManager.charging');
+    add('hardware', '电池电量', Math.round(b.level * 1000) / 10 + '%', 'BatteryManager.level');
+    add('hardware', '充满所需时间 (秒)', num(b.chargingTime), 'BatteryManager.chargingTime');
+    add('hardware', '耗尽所需时间 (秒)', num(b.dischargingTime), 'BatteryManager.dischargingTime');
+  } catch (e) {
+    add('hardware', '电池信息', '读取失败：' + (e.name || 'Error'), 'navigator.getBattery()');
+  }
+}
+
+function measureUnit(prop, value) {
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;left:-10000px;top:0;visibility:hidden;${prop}:${value};`;
+  document.body.appendChild(el);
+  const r = el.getBoundingClientRect();
+  el.remove();
+  return prop === 'width' ? r.width : r.height;
+}
+
+function collectScreen() {
+  const s = window.screen;
+  add('screen', 'screen.width × height', `${s.width} × ${s.height}`, 'screen.width / screen.height');
+  add('screen', 'screen.availWidth × availHeight', `${s.availWidth} × ${s.availHeight}`, 'screen.availWidth / availHeight');
+  add('screen', 'screen.availLeft × availTop', `${s.availLeft ?? '不可用'} × ${s.availTop ?? '不可用'}`, 'screen.availLeft / availTop');
+  add('screen', 'screen.colorDepth', s.colorDepth, 'screen.colorDepth');
+  add('screen', 'screen.pixelDepth', s.pixelDepth, 'screen.pixelDepth');
+  add('screen', '屏幕方向', s.orientation ? `${s.orientation.type} · ${s.orientation.angle}°` : '不可用', 'screen.orientation');
+  add('screen', 'screen.isExtended', typeof s.isExtended === 'boolean' ? s.isExtended : '不可用', 'screen.isExtended');
+  add('screen', 'devicePixelRatio', devicePixelRatio, 'window.devicePixelRatio');
+  add('screen', 'innerWidth × innerHeight', `${innerWidth} × ${innerHeight}`, 'window.innerWidth / innerHeight');
+  add('screen', 'outerWidth × outerHeight', `${outerWidth} × ${outerHeight}`, 'window.outerWidth / outerHeight');
+  add('screen', 'screenX / screenY', `${screenX} / ${screenY}`, 'window.screenX / screenY');
+  add('screen', 'scrollX / scrollY', `${Math.round(scrollX)} / ${Math.round(scrollY)}`, 'window.scrollX / scrollY');
+  add('screen', '文档滚动尺寸', `${document.documentElement.scrollWidth} × ${document.documentElement.scrollHeight}`, 'documentElement.scrollWidth / scrollHeight');
+
+  const vv = window.visualViewport;
+  if (vv) {
+    add('screen', 'visualViewport', {
+      width: vv.width, height: vv.height, scale: vv.scale,
+      offsetLeft: vv.offsetLeft, offsetTop: vv.offsetTop,
+      pageLeft: vv.pageLeft, pageTop: vv.pageTop
+    }, 'window.visualViewport');
+  } else {
+    add('screen', 'visualViewport', '不可用', 'window.visualViewport 不存在');
+  }
+
+  const units = [
+    ['1vw', 'width', '1vw'], ['1vh', 'height', '1vh'], ['1dvh', 'height', '1dvh'],
+    ['1svh', 'height', '1svh'], ['1lvh', 'height', '1lvh'], ['1rem', 'width', '1rem'],
+    ['1in', 'width', '1in'], ['1cm', 'width', '1cm'], ['1mm', 'width', '1mm'], ['1pt', 'width', '1pt']
+  ];
+  add('screen', 'CSS 单位实测（px）', units.map(([label, prop, val]) => `${label} = ${measureUnit(prop, val).toFixed(2)}px`), 'DOM 布局实测');
+
+  const mqs = [
+    ['prefers-color-scheme: dark', '(prefers-color-scheme: dark)'],
+    ['prefers-color-scheme: light', '(prefers-color-scheme: light)'],
+    ['prefers-reduced-motion: reduce', '(prefers-reduced-motion: reduce)'],
+    ['prefers-reduced-transparency: reduce', '(prefers-reduced-transparency: reduce)'],
+    ['prefers-contrast: more', '(prefers-contrast: more)'],
+    ['forced-colors: active', '(forced-colors: active)'],
+    ['inverted-colors: inverted', '(inverted-colors: inverted)'],
+    ['color-gamut: srgb', '(color-gamut: srgb)'],
+    ['color-gamut: p3', '(color-gamut: p3)'],
+    ['color-gamut: rec2020', '(color-gamut: rec2020)'],
+    ['dynamic-range: high', '(dynamic-range: high)'],
+    ['video-dynamic-range: high', '(video-dynamic-range: high)'],
+    ['pointer: fine', '(pointer: fine)'],
+    ['pointer: coarse', '(pointer: coarse)'],
+    ['pointer: none', '(pointer: none)'],
+    ['hover: hover', '(hover: hover)'],
+    ['hover: none', '(hover: none)'],
+    ['any-pointer: fine', '(any-pointer: fine)'],
+    ['any-pointer: coarse', '(any-pointer: coarse)'],
+    ['any-hover: hover', '(any-hover: hover)'],
+    ['display-mode: browser', '(display-mode: browser)'],
+    ['display-mode: standalone', '(display-mode: standalone)'],
+    ['display-mode: fullscreen', '(display-mode: fullscreen)'],
+    ['display-mode: minimal-ui', '(display-mode: minimal-ui)'],
+    ['display-mode: picture-in-picture', '(display-mode: picture-in-picture)'],
+    ['orientation: portrait', '(orientation: portrait)'],
+    ['orientation: landscape', '(orientation: landscape)'],
+    ['scripting: enabled', '(scripting: enabled)'],
+    ['update: fast', '(update: fast)'],
+    ['overflow-block: scroll', '(overflow-block: scroll)'],
+    ['overflow-inline: scroll', '(overflow-inline: scroll)'],
+    ['monochrome', '(monochrome)'],
+    ['resolution: 1dppx', '(resolution: 1dppx)'],
+    ['resolution: 1.5dppx', '(resolution: 1.5dppx)'],
+    ['resolution: 2dppx', '(resolution: 2dppx)'],
+    ['resolution: 3dppx', '(resolution: 3dppx)'],
+    ['prefers-color-scheme: no-preference', '(prefers-color-scheme: no-preference)']
+  ];
+  add('screen', '媒体查询匹配结果（✓=当前匹配）', mqs.map(([name, q]) => ({ name, ok: matchMedia(q).matches, expr: q })), 'window.matchMedia', { type: 'features' });
+
+  SUMMARY.screen = `${s.width}×${s.height} · DPR ${devicePixelRatio}`;
+}
+
+function collectLocale() {
+  const ro = Intl.DateTimeFormat().resolvedOptions();
+  add('locale', 'navigator.language', navigator.language, 'navigator.language');
+  add('locale', 'navigator.languages', navigator.languages, 'navigator.languages');
+  add('locale', 'Intl locale', ro.locale, 'Intl.DateTimeFormat().resolvedOptions().locale');
+  add('locale', '日历 (calendar)', ro.calendar, 'resolvedOptions().calendar');
+  add('locale', '数字系统 (numberingSystem)', ro.numberingSystem, 'resolvedOptions().numberingSystem');
+  add('locale', '时区 (timeZone)', ro.timeZone, 'resolvedOptions().timeZone');
+  add('locale', '小时周期 (hourCycle)', ro.hourCycle || '未提供', 'resolvedOptions().hourCycle');
+  add('locale', 'resolvedOptions 全量', ro, 'Intl.DateTimeFormat().resolvedOptions()');
+
+  const now = new Date();
+  const jan = new Date(2024, 0, 15, 12, 0, 0);
+  const jul = new Date(2024, 6, 15, 12, 0, 0);
+  const off = (d) => -d.getTimezoneOffset();
+  add('locale', '时区偏移（当前）', `${off(now)} 分钟`, 'Date.getTimezoneOffset()');
+  add('locale', '时区偏移（2024-01）', `${off(jan)} 分钟`, 'Date.getTimezoneOffset()');
+  add('locale', '时区偏移（2024-07）', `${off(jul)} 分钟`, 'Date.getTimezoneOffset()');
+  add('locale', '夏令时差异', off(jan) === off(jul) ? '无差异（可能不实行夏令时）' : `${Math.abs(off(jan) - off(jul))} 分钟`, '两次真实日期的偏移比较');
+
+  try {
+    const parts = new Intl.DateTimeFormat(undefined, { timeZoneName: 'long' }).formatToParts(now);
+    const tz = parts.find((p) => p.type === 'timeZoneName');
+    add('locale', '时区名称（long）', tz ? tz.value : '未返回', 'Intl.DateTimeFormat formatToParts');
+  } catch (e) {
+    add('locale', '时区名称', '读取失败：' + e.name, 'formatToParts');
+  }
+
+  add('locale', '日期格式', now.toLocaleDateString(), 'Date.toLocaleDateString()');
+  add('locale', '时间格式', now.toLocaleTimeString(), 'Date.toLocaleTimeString()');
+  add('locale', '日期时间格式', now.toLocaleString(), 'Date.toLocaleString()');
+  add('locale', 'Date.toString()', now.toString(), 'Date.toString()');
+  add('locale', '数字格式 (1234567.891)', (1234567.891).toLocaleString(), 'Number.toLocaleString()');
+  add('locale', '0.1 + 0.2 原始值', String(0.1 + 0.2), 'JavaScript 浮点运算');
+  add('locale', '货币格式 USD / CNY', [
+    (1234.5).toLocaleString(undefined, { style: 'currency', currency: 'USD' }),
+    (1234.5).toLocaleString(undefined, { style: 'currency', currency: 'CNY' })
+  ], 'Intl.NumberFormat currency');
+  add('locale', '百分比格式', (0.1234).toLocaleString(undefined, { style: 'percent' }), 'Intl.NumberFormat percent');
+
+  try {
+    const col = new Intl.Collator();
+    add('locale', 'Collator 比较 "ä" vs "z"', col.compare('ä', 'z'), 'Intl.Collator.compare');
+    add('locale', 'Collator resolvedOptions', col.resolvedOptions(), 'Intl.Collator.resolvedOptions()');
+    add('locale', '排序示例 ["b","ä","a","z"]', ['b', 'ä', 'a', 'z'].sort(col.compare), 'Intl.Collator.compare');
+  } catch (e) {
+    add('locale', 'Collator', '读取失败：' + e.name, 'Intl.Collator');
+  }
+
+  try {
+    if (typeof Intl.Locale === 'function') {
+      const loc = new Intl.Locale(ro.locale);
+      if (typeof loc.getWeekInfo === 'function') {
+        add('locale', '周信息 (getWeekInfo)', loc.getWeekInfo(), 'Intl.Locale.getWeekInfo()');
+      } else {
+        add('locale', '周信息 (getWeekInfo)', '不可用（接口未实现）', 'Intl.Locale.getWeekInfo');
+      }
+    }
+  } catch (e) {
+    add('locale', '周信息', '读取失败：' + e.name, 'Intl.Locale');
+  }
+
+  add('locale', '文档文字方向', getComputedStyle(document.documentElement).direction, 'getComputedStyle(documentElement).direction');
+
+  SUMMARY.tz = ro.timeZone;
+  SUMMARY.lang = (navigator.languages || [navigator.language]).join(', ');
+}
+
+function tryGL(type) {
+  try {
+    const c = document.createElement('canvas');
+    return c.getContext(type);
+  } catch (e) {
+    return null;
+  }
+}
+
+async function collectGraphics() {
+  const g2 = tryGL('webgl2');
+  const g1 = tryGL('webgl') || tryGL('experimental-webgl');
+  add('graphics', 'WebGL2 支持', !!g2, "getContext('webgl2')");
+  add('graphics', 'WebGL1 支持', !!g1, "getContext('webgl')");
+  const gl = g2 || g1;
+  if (!gl) {
+    add('graphics', 'WebGL 参数', '不可用（未获得 WebGL 上下文）', 'canvas.getContext 返回 null');
+    return;
+  }
+  add('graphics', '使用的上下文', (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) ? 'WebGL2RenderingContext' : 'WebGLRenderingContext', 'instanceof 检测');
+
+  const maskedVendor = gl.getParameter(gl.VENDOR);
+  const maskedRenderer = gl.getParameter(gl.RENDERER);
+  add('graphics', 'VENDOR（屏蔽）', maskedVendor, 'gl.getParameter(gl.VENDOR)');
+  add('graphics', 'RENDERER（屏蔽）', maskedRenderer, 'gl.getParameter(gl.RENDERER)');
+  add('graphics', 'VERSION', gl.getParameter(gl.VERSION), 'gl.getParameter(gl.VERSION)');
+  add('graphics', 'SHADING_LANGUAGE_VERSION', gl.getParameter(gl.SHADING_LANGUAGE_VERSION), 'gl.getParameter(gl.SHADING_LANGUAGE_VERSION)');
+
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  let unmaskedVendor = null;
+  let unmaskedRenderer = null;
+  if (dbg) {
+    unmaskedVendor = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
+    unmaskedRenderer = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
+    add('graphics', 'UNMASKED_VENDOR_WEBGL', unmaskedVendor, 'WEBGL_debug_renderer_info');
+    add('graphics', 'UNMASKED_RENDERER_WEBGL', unmaskedRenderer, 'WEBGL_debug_renderer_info');
+  } else {
+    add('graphics', 'WEBGL_debug_renderer_info', '不可用（扩展不存在，浏览器已屏蔽真实渲染器）', 'gl.getExtension');
+  }
+
+  const attrs = gl.getContextAttributes();
+  if (attrs) add('graphics', '上下文属性', attrs, 'gl.getContextAttributes()');
+
+  const paramNames = [
+    'MAX_TEXTURE_SIZE', 'MAX_CUBE_MAP_TEXTURE_SIZE', 'MAX_RENDERBUFFER_SIZE', 'MAX_VIEWPORT_DIMS',
+    'ALIASED_LINE_WIDTH_RANGE', 'ALIASED_POINT_SIZE_RANGE', 'MAX_VERTEX_ATTRIBS',
+    'MAX_VERTEX_UNIFORM_VECTORS', 'MAX_FRAGMENT_UNIFORM_VECTORS', 'MAX_VARYING_VECTORS',
+    'MAX_COMBINED_TEXTURE_IMAGE_UNITS', 'MAX_VERTEX_TEXTURE_IMAGE_UNITS', 'MAX_TEXTURE_IMAGE_UNITS',
+    'RED_BITS', 'GREEN_BITS', 'BLUE_BITS', 'ALPHA_BITS', 'DEPTH_BITS', 'STENCIL_BITS',
+    'SUBPIXEL_BITS', 'SAMPLE_BUFFERS', 'SAMPLES', 'MAX_TEXTURE_MAX_ANISOTROPY_EXT',
+    'MAX_3D_TEXTURE_SIZE', 'MAX_ARRAY_TEXTURE_LAYERS', 'MAX_DRAW_BUFFERS', 'MAX_COLOR_ATTACHMENTS',
+    'MAX_ELEMENT_INDEX', 'MAX_UNIFORM_BUFFER_BINDINGS', 'MAX_UNIFORM_BLOCK_SIZE',
+    'MAX_VERTEX_OUTPUT_COMPONENTS', 'MAX_FRAGMENT_INPUT_COMPONENTS', 'MAX_SAMPLES',
+    'MAX_COMBINED_UNIFORM_BLOCKS', 'MAX_VERTEX_UNIFORM_BLOCKS', 'MAX_FRAGMENT_UNIFORM_BLOCKS',
+    'MAX_TEXTURE_LOD_BIAS', 'MAX_CLIENT_WAIT_TIMEOUT_WEBGL', 'MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS',
+    'MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS', 'MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS'
+  ];
+  const params = {};
+  for (const name of paramNames) {
+    if (gl[name] === undefined) continue;
+    let v;
+    try {
+      v = gl.getParameter(gl[name]);
+    } catch (e) {
+      v = '读取失败（' + e.name + '）';
+    }
+    params[name] = v;
+    add('graphics', name, v, `gl.getParameter(gl.${name})`);
+  }
+
+  const precisionNames = [['LOW_FLOAT', gl.LOW_FLOAT], ['MEDIUM_FLOAT', gl.MEDIUM_FLOAT], ['HIGH_FLOAT', gl.HIGH_FLOAT]];
+  for (const [shaderName, shaderType] of [['VERTEX_SHADER', gl.VERTEX_SHADER], ['FRAGMENT_SHADER', gl.FRAGMENT_SHADER]]) {
+    for (const [pName, pType] of precisionNames) {
+      try {
+        const f = gl.getShaderPrecisionFormat(shaderType, pType);
+        if (f) add('graphics', `着色器精度 ${shaderName}.${pName}`, `rangeMin=${f.rangeMin} rangeMax=${f.rangeMax} precision=${f.precision}`, 'gl.getShaderPrecisionFormat');
+      } catch (e) { /* 忽略单个精度查询失败 */ }
+    }
+  }
+
+  let extensions = [];
+  try {
+    extensions = gl.getSupportedExtensions() || [];
+  } catch (e) {
+    extensions = [];
+  }
+  add('graphics', 'WebGL 扩展数量', extensions.length, 'gl.getSupportedExtensions()');
+  add('graphics', 'WebGL 扩展列表', extensions, 'gl.getSupportedExtensions()');
+
+  FP.webgl = await sha256(JSON.stringify({
+    vendor: unmaskedVendor || maskedVendor,
+    renderer: unmaskedRenderer || maskedRenderer,
+    version: gl.getParameter(gl.VERSION),
+    params: plain(params),
+    extensions
+  }));
+  add('graphics', 'WebGL 参数哈希（SHA-256）', FP.webgl, 'SHA-256(真实参数 JSON)', { copy: true });
+
+  await collectWebGPU();
+}
+
+async function collectWebGPU() {
+  if (!navigator.gpu) {
+    add('graphics', 'WebGPU', '不支持', 'navigator.gpu 不存在');
+    return;
+  }
+  let adapter = null;
+  try {
+    adapter = await navigator.gpu.requestAdapter();
+  } catch (e) {
+    add('graphics', 'WebGPU requestAdapter', '失败：' + (e.name || 'Error'), 'navigator.gpu.requestAdapter()');
+    return;
+  }
+  if (!adapter) {
+    add('graphics', 'WebGPU 适配器', '不可用（requestAdapter 返回 null，可能无可用 GPU）', 'navigator.gpu.requestAdapter()');
+    return;
+  }
+  let info = adapter.info;
+  if (!info && typeof adapter.requestAdapterInfo === 'function') {
+    try { info = await adapter.requestAdapterInfo(); } catch (e) { info = null; }
+  }
+  if (info) {
+    add('graphics', 'WebGPU 适配器信息', {
+      vendor: info.vendor || '（空）',
+      architecture: info.architecture || '（空）',
+      device: info.device || '（空）',
+      description: info.description || '（空）'
+    }, 'GPUAdapter.info');
+  } else {
+    add('graphics', 'WebGPU 适配器信息', '不可用（浏览器未暴露 adapter.info）', 'GPUAdapter.info');
+  }
+  add('graphics', 'WebGPU isFallbackAdapter', adapter.isFallbackAdapter === undefined ? '不可用' : adapter.isFallbackAdapter, 'GPUAdapter.isFallbackAdapter');
+  add('graphics', 'WebGPU 特性数量', adapter.features ? adapter.features.size : '不可用', 'GPUAdapter.features');
+  add('graphics', 'WebGPU 特性列表', adapter.features ? Array.from(adapter.features) : '不可用', 'GPUAdapter.features');
+  if (adapter.limits) {
+    const lim = adapter.limits;
+    const keys = ['maxTextureDimension2D', 'maxTextureArrayLayers', 'maxBindGroups', 'maxBufferSize', 'maxStorageBufferBindingSize', 'maxComputeWorkgroupStorageSize', 'maxComputeInvocationsPerWorkgroup', 'maxComputeWorkgroupSizeX', 'maxVertexAttributes', 'maxVertexBuffers', 'maxSampledTexturesPerShaderStage', 'maxUniformBuffersPerShaderStage'];
+    const out = {};
+    for (const k of keys) if (lim[k] !== undefined) out[k] = lim[k];
+    add('graphics', 'WebGPU 限制（部分）', out, 'GPUAdapter.limits');
+  }
+}
+
+async function canvasFingerprint() {
+  const c = document.createElement('canvas');
+  c.width = 320;
+  c.height = 100;
+  const x = c.getContext('2d');
+  if (!x) return null;
+  x.fillStyle = '#f2f4f8';
+  x.fillRect(0, 0, 320, 100);
+  x.textBaseline = 'alphabetic';
+  x.fillStyle = '#1f4e79';
+  x.font = '17px Arial';
+  x.fillText('Fingerprint 指纹 🦊 0123456789', 6, 24);
+  x.fillStyle = '#b04a00';
+  x.font = '15px "Times New Roman"';
+  x.fillText('Cwm fjordbank glyphs vext quiz', 6, 48);
+  x.fillStyle = 'rgba(0,128,255,0.55)';
+  x.font = '14px Georgia';
+  x.fillText('Cwm fjordbank glyphs vext quiz', 10, 68);
+  x.globalCompositeOperation = 'multiply';
+  const g = x.createLinearGradient(0, 60, 320, 100);
+  g.addColorStop(0, 'rgba(255,0,128,0.6)');
+  g.addColorStop(0.5, 'rgba(0,200,120,0.6)');
+  g.addColorStop(1, 'rgba(0,120,255,0.6)');
+  x.fillStyle = g;
+  x.beginPath();
+  x.arc(280, 70, 26, 0, Math.PI * 2);
+  x.fill();
+  x.globalCompositeOperation = 'source-over';
+  x.fillStyle = '#333';
+  x.font = '18px serif';
+  x.fillText('😀🌍🦊', 150, 82);
+  const dataUrl = c.toDataURL('image/png');
+  const pixels = x.getImageData(0, 0, c.width, c.height).data;
+  return {
+    hash: await sha256(dataUrl),
+    pixelHash: await sha256(pixels.buffer),
+    dataUrlLength: dataUrl.length,
+    size: `${c.width}×${c.height}`
+  };
+}
+
+async function audioFingerprint() {
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!OAC) return null;
+  const ctx = new OAC(1, 44100, 44100);
+  const osc = ctx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.value = 10000;
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -50;
+  comp.knee.value = 40;
+  comp.ratio.value = 12;
+  comp.attack.value = 0;
+  comp.release.value = 0.25;
+  osc.connect(comp);
+  comp.connect(ctx.destination);
+  osc.start(0);
+  const buf = await ctx.startRendering();
+  const data = buf.getChannelData(0);
+  let sum = 0;
+  for (let i = 4500; i < 5000 && i < data.length; i++) sum += Math.abs(data[i]);
+  return {
+    sum: sum.toFixed(6),
+    hash: await sha256(data.buffer),
+    sampleRate: buf.sampleRate,
+    length: buf.length
+  };
+}
+
+function layoutFingerprint() {
+  const el = document.createElement('div');
+  el.textContent = 'Cwm fjordbank glyphs vext quiz 0123456789 指纹';
+  el.style.cssText = 'position:absolute;left:-9999px;top:0;font:17px Arial, sans-serif;letter-spacing:.4px;white-space:nowrap;';
+  document.body.appendChild(el);
+  const r = el.getBoundingClientRect();
+  const rects = el.getClientRects();
+  const cs = getComputedStyle(el);
+  const out = {
+    x: r.x, y: r.y, width: r.width, height: r.height,
+    rectCount: rects.length,
+    fontFamily: cs.fontFamily,
+    lineHeight: cs.lineHeight
+  };
+  el.remove();
+  return out;
+}
+
+function detectFonts() {
+  const baselines = ['monospace', 'sans-serif', 'serif'];
+  const span = document.createElement('span');
+  span.textContent = 'mmmmmmmmmmlli';
+  span.style.cssText = 'position:absolute;left:-9999px;top:-9999px;font-size:72px;white-space:nowrap;font-weight:400;font-style:normal;';
+  document.body.appendChild(span);
+  const measure = (family) => {
+    span.style.fontFamily = family;
+    return span.getBoundingClientRect().width;
+  };
+  const base = {};
+  for (const b of baselines) base[b] = measure(b);
+  const detected = [];
+  for (const f of FONT_LIST) {
+    for (const b of baselines) {
+      const w = measure(`"${f}", ${b}`);
+      if (Math.abs(w - base[b]) > 0.1) {
+        detected.push(f);
+        break;
+      }
+    }
+  }
+  span.remove();
+  return { detected: Array.from(new Set(detected)), base };
+}
+
+async function collectHashes() {
+  const cf = await canvasFingerprint();
+  if (cf) {
+    FP.canvas = cf.hash;
+    SUMMARY.hashes.canvas = cf.hash;
+    add('hashes', 'Canvas 2D 哈希（PNG dataURL）', cf.hash, '实测 · CanvasRenderingContext2D + SHA-256', { copy: true });
+    add('hashes', 'Canvas 像素哈希（RGBA）', cf.pixelHash, '实测 · getImageData + SHA-256', { copy: true });
+    add('hashes', 'Canvas dataURL 长度', cf.dataUrlLength, '实测 · toDataURL("image/png").length');
+    add('hashes', 'Canvas 尺寸', cf.size, '实测');
+  } else {
+    add('hashes', 'Canvas 2D', '不可用（未获得 2D 上下文）', "canvas.getContext('2d')");
+  }
+
+  const layout = layoutFingerprint();
+  FP.layoutHash = await sha256(JSON.stringify(layout));
+  FP.layout = FP.layoutHash;
+  SUMMARY.hashes.layout = FP.layoutHash;
+  add('hashes', '布局几何哈希（SHA-256）', FP.layoutHash, '实测 · getBoundingClientRect + getClientRects', { copy: true });
+  add('hashes', '布局几何原始值', layout, '实测 · DOM 布局');
+
+  const fonts = detectFonts();
+  FP.fontsHash = await sha256(fonts.detected.slice().sort().join('\n'));
+  FP.fonts = FP.fontsHash;
+  FP.fontsCount = fonts.detected.length;
+  SUMMARY.hashes.fonts = FP.fontsHash;
+  add('hashes', '字体列表哈希（SHA-256）', FP.fontsHash, '实测 · Canvas 宽度差异检测 + SHA-256', { copy: true });
+
+  add('fonts', '检测到字体数量', fonts.detected.length, '实测 · Canvas 文本宽度差异');
+  add('fonts', '检测到字体列表', fonts.detected.length ? fonts.detected : '（未检测到列表内字体）', '实测 · "字体, 基线字体" 与基线宽度比较');
+  add('fonts', '基线宽度（72px "mmmmmmmmmmlli"）', fonts.base, '实测 · Canvas measureText 等效宽度');
+  add('fonts', '本地字体访问 API (queryLocalFonts)', typeof window.queryLocalFonts === 'function', 'typeof window.queryLocalFonts');
+  add('fonts', '检测方法说明', '仅当指定字体真实存在且其字形宽度与回退基线不同才判定为“检测到”；只能判断疑似安装，不能判断字体文件版本。', '方法说明');
+
+  const audio = await audioFingerprint();
+  if (audio) {
+    FP.audioHash = audio.hash;
+    FP.audioSum = audio.sum;
+    SUMMARY.hashes.audio = audio.hash;
+    add('hashes', '音频指纹哈希（SHA-256）', audio.hash, '实测 · OfflineAudioContext 渲染 + SHA-256', { copy: true });
+    add('hashes', '音频指纹求和值', audio.sum, '实测 · 4500–5000 采样绝对值之和');
+    add('audio', 'OfflineAudioContext 渲染采样率', audio.sampleRate, 'OfflineAudioContext.sampleRate');
+    add('audio', 'OfflineAudioContext 渲染长度', audio.length, 'AudioBuffer.length');
+  } else {
+    add('hashes', '音频指纹', '不可用（OfflineAudioContext 不存在）', 'window.OfflineAudioContext');
+    add('audio', 'OfflineAudioContext', '不可用', 'window.OfflineAudioContext 不存在');
+  }
+}
+
+async function collectAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) {
+    add('audio', 'AudioContext', '不可用', 'window.AudioContext 不存在');
+  } else {
+    let ac = null;
+    try {
+      ac = new AC();
+      add('audio', 'AudioContext.sampleRate', ac.sampleRate, 'AudioContext.sampleRate');
+      add('audio', 'AudioContext.state', ac.state, 'AudioContext.state');
+      if ('baseLatency' in ac) add('audio', 'baseLatency (秒)', ac.baseLatency, 'AudioContext.baseLatency');
+      if ('outputLatency' in ac) add('audio', 'outputLatency (秒)', ac.outputLatency, 'AudioContext.outputLatency');
+      try { add('audio', 'destination.maxChannelCount', ac.destination.maxChannelCount, 'AudioDestinationNode.maxChannelCount'); } catch (e) { /* 部分实现不暴露 */ }
+    } catch (e) {
+      add('audio', 'AudioContext', '创建失败：' + (e.name || 'Error'), 'new AudioContext()');
+    } finally {
+      if (ac && ac.state !== 'closed') ac.close().catch(() => {});
+    }
+  }
+  add('audio', 'AudioWorklet 支持', typeof window.AudioWorklet !== 'undefined', 'typeof AudioWorklet');
+
+  const ss = window.speechSynthesis;
+  if (!ss) {
+    add('audio', '语音合成 (speechSynthesis)', '不可用', 'window.speechSynthesis 不存在');
+    return;
+  }
+  const voices = await new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; resolve(v); };
+    const read = () => finish(ss.getVoices() || []);
+    const initial = ss.getVoices();
+    if (initial && initial.length) { finish(initial); return; }
+    const timer = setTimeout(read, 1600);
+    try {
+      ss.addEventListener('voiceschanged', () => { clearTimeout(timer); read(); }, { once: true });
+    } catch (e) {
+      clearTimeout(timer);
+      read();
+    }
+  });
+  add('audio', '语音合成 voice 数量', voices.length, 'speechSynthesis.getVoices()');
+  add('audio', '语音合成 voices', voices.map((v) => `${v.name} (${v.lang})${v.localService ? ' · 本地' : ' · 网络'}`), 'speechSynthesis.getVoices()');
+}
+
+async function collectMedia() {
+  if (!navigator.mediaDevices) {
+    add('media', 'navigator.mediaDevices', '不可用（可能非安全上下文）', 'navigator.mediaDevices');
+    return;
+  }
+  add('media', 'navigator.mediaDevices', '可用', 'navigator.mediaDevices');
+
+  if (navigator.mediaDevices.getSupportedConstraints) {
+    const c = navigator.mediaDevices.getSupportedConstraints();
+    add('media', '支持的约束 (getSupportedConstraints)', Object.keys(c).filter((k) => c[k]), 'navigator.mediaDevices.getSupportedConstraints()');
+  }
+
+  try {
+    const ds = await navigator.mediaDevices.enumerateDevices();
+    const counts = { audioinput: 0, audiooutput: 0, videoinput: 0 };
+    for (const d of ds) counts[d.kind] = (counts[d.kind] || 0) + 1;
+    add('media', '设备数量', counts, 'navigator.mediaDevices.enumerateDevices()');
+    add('media', '设备列表', ds.map((d) => ({
+      kind: d.kind,
+      label: d.label || '（空：未授权或不可用）',
+      deviceId: d.deviceId ? d.deviceId.slice(0, 12) + '…' : '（空）',
+      groupId: d.groupId ? d.groupId.slice(0, 12) + '…' : '（空）'
+    })), 'enumerateDevices()（未主动申请权限）');
+  } catch (e) {
+    add('media', '设备枚举', '失败：' + (e.name || 'Error'), 'enumerateDevices()');
+  }
+
+  const videoEl = document.createElement('video');
+  const videoCodecs = [
+    ['H.264 Baseline', 'video/mp4; codecs="avc1.42E01E"'],
+    ['H.264 High', 'video/mp4; codecs="avc1.640028"'],
+    ['H.265 / HEVC', 'video/mp4; codecs="hvc1.1.6.L93.B0"'],
+    ['AV1', 'video/mp4; codecs="av01.0.05M.08"'],
+    ['VP8', 'video/webm; codecs="vp8"'],
+    ['VP9', 'video/webm; codecs="vp9"'],
+    ['MP4 容器', 'video/mp4'],
+    ['WebM 容器', 'video/webm']
+  ];
+  add('media', '视频编解码支持', videoCodecs.map(([name, type]) => `${name}: ${videoEl.canPlayType(type) || '不支持'}`), 'HTMLVideoElement.canPlayType');
+
+  const audioEl = document.createElement('audio');
+  const audioCodecs = [
+    ['MP3', 'audio/mpeg'],
+    ['AAC-LC', 'audio/mp4; codecs="mp4a.40.2"'],
+    ['AAC-HE', 'audio/mp4; codecs="mp4a.40.5"'],
+    ['Opus (WebM)', 'audio/webm; codecs="opus"'],
+    ['Opus (Ogg)', 'audio/ogg; codecs="opus"'],
+    ['Vorbis', 'audio/ogg; codecs="vorbis"'],
+    ['FLAC', 'audio/flac'],
+    ['WAV / PCM', 'audio/wav']
+  ];
+  add('media', '音频编解码支持', audioCodecs.map(([name, type]) => `${name}: ${audioEl.canPlayType(type) || '不支持'}`), 'HTMLAudioElement.canPlayType');
+
+  if (typeof MediaRecorder === 'function') {
+    const types = ['video/webm', 'video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm;codecs=h264', 'video/mp4', 'video/mp4;codecs=avc1.42E01E', 'audio/webm', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/mp4;codecs=mp4a.40.2'];
+    add('media', 'MediaRecorder 支持的类型', types.map((t) => `${t}: ${MediaRecorder.isTypeSupported(t) ? '支持' : '不支持'}`), 'MediaRecorder.isTypeSupported');
+  } else {
+    add('media', 'MediaRecorder', '不可用', 'typeof MediaRecorder');
+  }
+
+  if (typeof MediaSource === 'function') {
+    const types = ['video/mp4', 'video/webm', 'video/mp4;codecs="avc1.42E01E"', 'video/webm;codecs="vp9"', 'audio/mp4;codecs="mp4a.40.2"'];
+    add('media', 'MediaSource 支持的类型', types.map((t) => `${t}: ${MediaSource.isTypeSupported(t) ? '支持' : '不支持'}`), 'MediaSource.isTypeSupported');
+  } else {
+    add('media', 'MediaSource', '不可用', 'typeof MediaSource');
+  }
+
+  add('media', 'requestVideoFrameCallback', typeof HTMLVideoElement !== 'undefined' && 'requestVideoFrameCallback' in HTMLVideoElement.prototype, 'HTMLVideoElement.prototype');
+  add('media', 'MediaCapabilities', !!navigator.mediaCapabilities, 'navigator.mediaCapabilities');
+  add('media', 'WebCodecs (VideoEncoder)', typeof VideoEncoder === 'function', 'typeof VideoEncoder');
+}
+
+function testStorage(getter) {
+  try {
+    const s = getter();
+    const k = '__fp_probe__';
+    s.setItem(k, '1');
+    const ok = s.getItem(k) === '1';
+    s.removeItem(k);
+    return ok;
+  } catch (e) {
+    return '不可用：' + (e.name || 'Error');
+  }
+}
+
+function testCookie() {
+  try {
+    const k = '__fp_probe_' + Math.random().toString(36).slice(2);
+    document.cookie = k + '=1; path=/; SameSite=Lax';
+    const ok = document.cookie.indexOf(k + '=1') !== -1;
+    document.cookie = k + '=; path=/; Max-Age=0; SameSite=Lax';
+    return ok;
+  } catch (e) {
+    return '不可用：' + (e.name || 'Error');
+  }
+}
+
+function testIndexedDB() {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (v) => { if (!settled) { settled = true; resolve(v); } };
+    try {
+      const name = '__fp_test_' + Date.now();
+      const req = indexedDB.open(name, 1);
+      req.onupgradeneeded = () => {};
+      req.onsuccess = () => {
+        const db = req.result;
+        const v = db.version;
+        db.close();
+        try { indexedDB.deleteDatabase(name); } catch (e) { /* 忽略清理失败 */ }
+        finish('可用（测试数据库版本 ' + v + '）');
+      };
+      req.onerror = () => finish('不可用：' + (req.error ? req.error.name : '打开失败'));
+      req.onblocked = () => finish('不可用：blocked');
+      setTimeout(() => finish('不可用：超时'), 1500);
+    } catch (e) {
+      finish('不可用：' + (e.name || 'Error'));
+    }
+  });
+}
+
+function formatBytes(n) {
+  if (!Number.isFinite(n)) return String(n);
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  let v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return `${v.toFixed(2)} ${units[i]}`;
+}
+
+async function collectStorage() {
+  add('storage', 'localStorage 可用', testStorage(() => localStorage), '写入/读取/删除探测');
+  add('storage', 'sessionStorage 可用', testStorage(() => sessionStorage), '写入/读取/删除探测');
+  add('storage', 'Cookie 可写', testCookie(), 'document.cookie 实测');
+  add('storage', 'IndexedDB 可用', await testIndexedDB(), '打开并删除测试数据库');
+  add('storage', 'OPFS 支持', !!(navigator.storage && navigator.storage.getDirectory), 'navigator.storage.getDirectory');
+  add('storage', 'CacheStorage 支持', !!window.caches, 'window.caches');
+  add('storage', 'Service Worker 支持', 'serviceWorker' in navigator, "'serviceWorker' in navigator");
+  add('storage', 'Service Worker 控制器', navigator.serviceWorker && navigator.serviceWorker.controller ? '已控制' : '未控制', 'navigator.serviceWorker.controller');
+
+  if (navigator.storage && navigator.storage.estimate) {
+    try {
+      const est = await navigator.storage.estimate();
+      add('storage', '存储配额 quota', `${formatBytes(est.quota)}（${est.quota} 字节）`, 'navigator.storage.estimate().quota');
+      add('storage', '已使用 usage', `${formatBytes(est.usage)}（${est.usage} 字节）`, 'navigator.storage.estimate().usage');
+      if (est.usageDetails) add('storage', 'usageDetails', est.usageDetails, 'navigator.storage.estimate().usageDetails');
+    } catch (e) {
+      add('storage', '存储估算', '失败：' + (e.name || 'Error'), 'navigator.storage.estimate()');
+    }
+  } else {
+    add('storage', 'Storage API', '不可用', 'navigator.storage.estimate 不存在');
+  }
+
+  if (navigator.storage && navigator.storage.persisted) {
+    try {
+      add('storage', '存储已持久化', await navigator.storage.persisted(), 'navigator.storage.persisted()');
+    } catch (e) {
+      add('storage', '存储持久化状态', '读取失败：' + e.name, 'navigator.storage.persisted()');
+    }
+  }
+}
+
+async function collectPermissions() {
+  if (!navigator.permissions) {
+    add('permissions', 'Permissions API', '不可用', 'navigator.permissions 不存在');
+    return;
+  }
+  const names = [
+    'geolocation', 'notifications', 'camera', 'microphone', 'clipboard-read', 'clipboard-write',
+    'midi', 'background-sync', 'persistent-storage', 'accelerometer', 'gyroscope', 'magnetometer',
+    'payment-handler', 'screen-wake-lock', 'idle-detection', 'storage-access',
+    'top-level-storage-access', 'window-management', 'local-fonts', 'push', 'display-capture'
+  ];
+  const results = await Promise.all(names.map(async (name) => {
+    try {
+      const st = await navigator.permissions.query({ name });
+      return { name, state: st.state };
+    } catch (e) {
+      return { name, state: '不支持/查询失败（' + (e.name || 'Error') + '）' };
+    }
+  }));
+  for (const r of results) {
+    add('permissions', r.name, r.state, `navigator.permissions.query({name:"${r.name}"})`);
+  }
+}
+
+async function collectNetwork() {
+  const c = navigator.connection;
+  if (c) {
+    add('network', 'connection.type', c.type || '不可用（该浏览器未暴露 type）', 'navigator.connection.type');
+    add('network', 'effectiveType', c.effectiveType || '不可用', 'navigator.connection.effectiveType');
+    add('network', 'rtt (ms)', c.rtt === undefined ? '不可用' : c.rtt, 'navigator.connection.rtt');
+    add('network', 'downlink (Mbps)', c.downlink === undefined ? '不可用' : c.downlink, 'navigator.connection.downlink');
+    add('network', 'saveData', c.saveData, 'navigator.connection.saveData');
+  } else {
+    add('network', 'Network Information API', '不可用', 'navigator.connection 不存在');
+  }
+  add('network', 'navigator.onLine', navigator.onLine, 'navigator.onLine');
+
+  const nav = performance.getEntriesByType('navigation')[0];
+  if (nav) {
+    add('network', 'HTTP 协议版本 (nextHopProtocol)', nav.nextHopProtocol || '不可用', 'PerformanceNavigationTiming.nextHopProtocol');
+  }
+}
+
+async function fetchJSON(url, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms || 4500);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function collectPublicIP() {
+  const v4row = add('network', '公网 IPv4（第三方）', '查询中…', 'api.ipify.org');
+  const v6row = add('network', '公网 IPv6 / 回退地址（第三方）', '查询中…', 'api64.ipify.org');
+  const geoRow = add('network', '出口归属地 / 运营商（第三方）', '查询中…', 'ipwho.is（失败时回退 ipinfo.io）');
+
+  const geoPromise = (async () => {
+    try {
+      const g = await fetchJSON('https://ipwho.is/', 3500);
+      if (g && g.success !== false && g.ip) {
+        return {
+          source: 'ipwho.is',
+          data: {
+            ip: g.ip,
+            type: g.type || '（未返回）',
+            country: g.country || '（未返回）',
+            country_code: g.country_code || '（未返回）',
+            region: g.region || '（未返回）',
+            city: g.city || '（未返回）',
+            postal: g.postal || '（未返回）',
+            latitude: g.latitude,
+            longitude: g.longitude,
+            timezone: g.timezone ? g.timezone.id : '（未返回）',
+            asn: g.connection ? g.connection.asn : '（未返回）',
+            org: g.connection ? g.connection.org : '（未返回）',
+            isp: g.connection ? g.connection.isp : '（未返回）'
+          }
+        };
+      }
+    } catch (e) { /* 继续尝试回退接口 */ }
+    try {
+      const g = await fetchJSON('https://ipinfo.io/json', 3500);
+      if (g && g.ip) {
+        return {
+          source: 'ipinfo.io',
+          data: {
+            ip: g.ip,
+            city: g.city || '（未返回）',
+            region: g.region || '（未返回）',
+            country: g.country || '（未返回）',
+            postal: g.postal || '（未返回）',
+            loc: g.loc || '（未返回）',
+            org: g.org || '（未返回）',
+            timezone: g.timezone || '（未返回）'
+          }
+        };
+      }
+    } catch (e) { /* 两个接口均失败 */ }
+    return null;
+  })();
+
+  const [v4, v6, geo] = await Promise.allSettled([
+    fetchJSON('https://api.ipify.org?format=json'),
+    fetchJSON('https://api64.ipify.org?format=json'),
+    geoPromise
+  ]);
+
+  const isIPv4 = (ip) => /^\d{1,3}(\.\d{1,3}){3}$/.test(ip);
+  const v4ip = (v4.status === 'fulfilled' && v4.value && v4.value.ip) ? v4.value.ip : null;
+  const v6ip = (v6.status === 'fulfilled' && v6.value && v6.value.ip) ? v6.value.ip : null;
+
+  if (v4ip) {
+    setRow(v4row, v4ip);
+  } else if (v6ip && isIPv4(v6ip)) {
+    setRow(v4row, v6ip + '（经 api64 回退获取）', 'api64.ipify.org（api.ipify.org 失败时的回退）');
+  } else {
+    setRow(v4row, '请求失败（超时 / CORS / 网络受限）', 'api.ipify.org');
+  }
+
+  if (v6ip) {
+    const fallback = isIPv4(v6ip) ? '（该网络无 IPv6，接口回退返回 IPv4）' : '';
+    setRow(v6row, v6ip + fallback, 'api64.ipify.org');
+  } else {
+    setRow(v6row, '请求失败（超时 / CORS / 网络受限）', 'api64.ipify.org');
+  }
+
+  if (geo.status === 'fulfilled' && geo.value) {
+    setRow(geoRow, geo.value.data, geo.value.source);
+  } else {
+    setRow(geoRow, '请求失败（超时 / CORS / 网络受限）', 'ipwho.is → ipinfo.io');
+  }
+}
+
+function parseCandidate(c) {
+  const p = String(c).split(/\s+/);
+  return { raw: c, protocol: p[2] || '', address: p[4] || '', port: p[5] || '', type: p[7] || '' };
+}
+
+async function collectWebRTC() {
+  add('webrtc', 'RTCPeerConnection', typeof window.RTCPeerConnection === 'function', 'typeof window.RTCPeerConnection');
+  if (typeof window.RTCPeerConnection !== 'function') return;
+
+  let pc = null;
+  try {
+    pc = new RTCPeerConnection({ iceServers: [] });
+  } catch (e) {
+    add('webrtc', '创建 RTCPeerConnection', '失败：' + (e.name || 'Error'), 'new RTCPeerConnection()');
+    return;
+  }
+
+  const candidates = new Set();
+  pc.onicecandidate = (e) => {
+    if (e.candidate && e.candidate.candidate) candidates.add(e.candidate.candidate);
+  };
+  try {
+    pc.createDataChannel('fp');
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+  } catch (e) {
+    add('webrtc', 'ICE 协商', '失败：' + (e.name || 'Error'), 'createOffer / setLocalDescription');
+  }
+
+  await sleep(2200);
+  const raw = Array.from(candidates);
+  add('webrtc', '候选地址数量', raw.length, 'icecandidate 事件（2.2 秒窗口）');
+  add('webrtc', '候选地址明细', raw.length ? raw.map(parseCandidate) : '未收集到', 'icecandidate 事件（未配置 STUN/TURN）');
+  add('webrtc', 'mDNS 说明', '现代浏览器通常把主机候选地址替换为 .local mDNS 名称，因此无法从该接口获得真实内网 IP；这本身也是隐私保护行为。', '实测结果解读');
+  try { pc.close(); } catch (e) { /* 已关闭 */ }
+}
+
+function collectPlugins() {
+  const plugins = Array.from(navigator.plugins || []).map((p) => ({
+    name: p.name,
+    filename: p.filename,
+    description: p.description,
+    mimeTypes: Array.from(p).map((m) => m.type)
+  }));
+  add('plugins', '插件数量', plugins.length, 'navigator.plugins.length');
+  add('plugins', '插件列表', plugins.length ? plugins : '（空）', 'navigator.plugins');
+  const mimes = Array.from(navigator.mimeTypes || []).map((m) => ({
+    type: m.type,
+    suffixes: m.suffixes,
+    description: m.description,
+    enabledPlugin: m.enabledPlugin ? m.enabledPlugin.name : null
+  }));
+  add('plugins', 'MIME 数量', mimes.length, 'navigator.mimeTypes.length');
+  add('plugins', 'MIME 列表', mimes.length ? mimes : '（空）', 'navigator.mimeTypes');
+  add('plugins', 'pdfViewerEnabled', navigator.pdfViewerEnabled === undefined ? '不可用' : navigator.pdfViewerEnabled, 'navigator.pdfViewerEnabled');
+}
+
+function collectPage() {
+  const loc = location;
+  add('page', '页面标题', document.title, 'document.title');
+  add('page', 'URL', loc.href, 'location.href');
+  add('page', 'Origin', loc.origin, 'location.origin');
+  add('page', '协议', loc.protocol, 'location.protocol');
+  add('page', '主机', loc.host, 'location.host');
+  add('page', '端口', loc.port || '（默认）', 'location.port');
+  add('page', '路径', loc.pathname, 'location.pathname');
+  add('page', '查询串长度', loc.search.length, 'location.search.length');
+  add('page', '哈希长度', loc.hash.length, 'location.hash.length');
+  add('page', '来源页 (referrer)', document.referrer || '（无）', 'document.referrer');
+  add('page', '字符集', document.characterSet, 'document.characterSet');
+  add('page', 'contentType', document.contentType, 'document.contentType');
+  add('page', '兼容模式', document.compatMode, 'document.compatMode');
+  add('page', 'readyState', document.readyState, 'document.readyState');
+  add('page', 'visibilityState', document.visibilityState, 'document.visibilityState');
+  add('page', 'document.hidden', document.hidden, 'document.hidden');
+  add('page', 'document.hasFocus()', document.hasFocus(), 'document.hasFocus()');
+  add('page', 'lastModified', document.lastModified, 'document.lastModified');
+  add('page', 'isSecureContext', typeof window.isSecureContext === 'boolean' ? window.isSecureContext : '不可用', 'window.isSecureContext');
+  add('page', 'crossOriginIsolated', typeof window.crossOriginIsolated === 'boolean' ? window.crossOriginIsolated : '不可用', 'window.crossOriginIsolated');
+  add('page', 'originAgentCluster', typeof window.originAgentCluster === 'boolean' ? window.originAgentCluster : '不可用', 'window.originAgentCluster');
+  add('page', 'cookieEnabled', navigator.cookieEnabled, 'navigator.cookieEnabled');
+
+  const ua = navigator.userActivation;
+  add('page', 'userActivation', ua ? { isActive: ua.isActive, hasBeenActive: ua.hasBeenActive } : '不可用', 'navigator.userActivation');
+
+  const nav = performance.getEntriesByType('navigation')[0];
+  if (nav) {
+    add('page', '导航类型', nav.type, 'PerformanceNavigationTiming.type');
+    add('page', '重定向次数', nav.redirectCount, 'PerformanceNavigationTiming.redirectCount');
+    add('page', 'nextHopProtocol', nav.nextHopProtocol || '不可用', 'PerformanceNavigationTiming.nextHopProtocol');
+    add('page', 'transferSize (字节)', nav.transferSize, 'PerformanceNavigationTiming.transferSize');
+    add('page', 'encodedBodySize (字节)', nav.encodedBodySize, 'PerformanceNavigationTiming.encodedBodySize');
+    add('page', 'decodedBodySize (字节)', nav.decodedBodySize, 'PerformanceNavigationTiming.decodedBodySize');
+    add('page', 'DOMContentLoaded (ms)', Math.round(nav.domContentLoadedEventEnd), 'PerformanceNavigationTiming');
+    add('page', 'loadEventEnd (ms)', Math.round(nav.loadEventEnd), 'PerformanceNavigationTiming');
+    add('page', '导航总耗时 (ms)', Math.round(nav.duration), 'PerformanceNavigationTiming.duration');
+    add('page', 'serverTiming', nav.serverTiming && nav.serverTiming.length ? Array.from(nav.serverTiming).map((s) => ({ name: s.name, duration: s.duration, description: s.description })) : '（无）', 'PerformanceNavigationTiming.serverTiming');
+  } else {
+    add('page', '导航时序', '不可用（PerformanceNavigationTiming 未返回）', 'performance.getEntriesByType("navigation")');
+  }
+
+  add('page', 'performance.timeOrigin', performance.timeOrigin, 'performance.timeOrigin');
+  add('page', '资源请求条目数', performance.getEntriesByType('resource').length, 'performance.getEntriesByType("resource")');
+
+  if (performance.memory) {
+    add('page', 'JS 堆内存 (performance.memory)', {
+      jsHeapSizeLimit: performance.memory.jsHeapSizeLimit,
+      totalJSHeapSize: performance.memory.totalJSHeapSize,
+      usedJSHeapSize: performance.memory.usedJSHeapSize
+    }, 'performance.memory（非标准，Chromium 提供）');
+  }
+}
+
+async function collectPrivacy() {
+  add('privacy', 'navigator.doNotTrack', navigator.doNotTrack === null ? 'null（未设置）' : navigator.doNotTrack, 'navigator.doNotTrack');
+  add('privacy', 'navigator.globalPrivacyControl', navigator.globalPrivacyControl === undefined ? '不可用' : navigator.globalPrivacyControl, 'navigator.globalPrivacyControl');
+  add('privacy', 'cookieEnabled', navigator.cookieEnabled, 'navigator.cookieEnabled');
+  add('privacy', 'webdriver', navigator.webdriver, 'navigator.webdriver');
+  add('privacy', 'window.chrome', typeof window.chrome !== 'undefined', 'typeof window.chrome');
+  add('privacy', 'window.chrome.runtime', !!(window.chrome && window.chrome.runtime), 'window.chrome.runtime');
+  add('privacy', 'window.safari', typeof window.safari !== 'undefined', 'typeof window.safari');
+  add('privacy', 'window.opr', typeof window.opr !== 'undefined', 'typeof window.opr');
+  add('privacy', 'window.InstallTrigger', typeof window.InstallTrigger !== 'undefined', 'typeof window.InstallTrigger');
+  add('privacy', 'navigator.brave 对象', !!navigator.brave, 'navigator.brave');
+  add('privacy', 'navigator.pdfViewerEnabled', navigator.pdfViewerEnabled === undefined ? '不可用' : navigator.pdfViewerEnabled, 'navigator.pdfViewerEnabled');
+  add('privacy', 'cookieDeprecationLabel 接口', !!(navigator.cookieDeprecationLabel && navigator.cookieDeprecationLabel.getValue), 'navigator.cookieDeprecationLabel');
+
+  if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+    try {
+      add('privacy', 'Brave isBrave()', await navigator.brave.isBrave(), 'navigator.brave.isBrave()');
+    } catch (e) {
+      add('privacy', 'Brave isBrave()', '读取失败：' + e.name, 'navigator.brave.isBrave()');
+    }
+  }
+
+  if (navigator.cookieDeprecationLabel && typeof navigator.cookieDeprecationLabel.getValue === 'function') {
+    try {
+      add('privacy', 'cookieDeprecationLabel 值', await navigator.cookieDeprecationLabel.getValue(), 'navigator.cookieDeprecationLabel.getValue()');
+    } catch (e) {
+      add('privacy', 'cookieDeprecationLabel 值', '读取失败：' + e.name, 'navigator.cookieDeprecationLabel.getValue()');
+    }
+  }
+}
+
+function collectFeatures() {
+  const groups = {
+    '核心运行时': [
+      ['WebAssembly', () => typeof WebAssembly !== 'undefined'],
+      ['SharedArrayBuffer', () => typeof SharedArrayBuffer !== 'undefined'],
+      ['Atomics', () => typeof Atomics !== 'undefined'],
+      ['BigInt64Array', () => typeof BigInt64Array !== 'undefined'],
+      ['ResizeObserver', () => typeof ResizeObserver !== 'undefined'],
+      ['IntersectionObserver', () => typeof IntersectionObserver !== 'undefined'],
+      ['MutationObserver', () => typeof MutationObserver !== 'undefined'],
+      ['PerformanceObserver', () => typeof PerformanceObserver !== 'undefined'],
+      ['requestIdleCallback', () => typeof window.requestIdleCallback === 'function'],
+      ['scheduler', () => typeof window.scheduler !== 'undefined'],
+      ['crypto.subtle', () => !!(window.crypto && crypto.subtle)],
+      ['crypto.randomUUID', () => typeof crypto.randomUUID === 'function'],
+      ['Trusted Types', () => typeof window.trustedTypes !== 'undefined'],
+      ['Navigation API', () => typeof window.navigation !== 'undefined'],
+      ['View Transitions', () => typeof document.startViewTransition === 'function'],
+      ['Element.setHTML (Sanitizer)', () => typeof Element !== 'undefined' && typeof Element.prototype.setHTML === 'function']
+    ],
+    '网络与通信': [
+      ['fetch', () => typeof fetch === 'function'],
+      ['WebSocket', () => typeof WebSocket === 'function'],
+      ['WebTransport', () => typeof WebTransport === 'function'],
+      ['EventSource', () => typeof EventSource === 'function'],
+      ['ReadableStream', () => typeof ReadableStream === 'function'],
+      ['TransformStream', () => typeof TransformStream === 'function'],
+      ['CompressionStream', () => typeof CompressionStream === 'function'],
+      ['DecompressionStream', () => typeof DecompressionStream === 'function'],
+      ['BroadcastChannel', () => typeof BroadcastChannel === 'function'],
+      ['MessageChannel', () => typeof MessageChannel === 'function'],
+      ['Web Locks', () => !!navigator.locks],
+      ['Service Worker', () => 'serviceWorker' in navigator],
+      ['Push Manager', () => 'PushManager' in window],
+      ['Background Sync', () => 'SyncManager' in window],
+      ['Periodic Sync', () => 'PeriodicSyncManager' in window],
+      ['Background Fetch', () => 'BackgroundFetchManager' in window],
+      ['Cookie Store', () => !!window.cookieStore]
+    ],
+    '图形、媒体与语音': [
+      ['WebGL', () => typeof WebGLRenderingContext !== 'undefined'],
+      ['WebGL2', () => typeof WebGL2RenderingContext !== 'undefined'],
+      ['WebGPU', () => !!navigator.gpu],
+      ['OffscreenCanvas', () => typeof OffscreenCanvas === 'function'],
+      ['Web Audio', () => !!(window.AudioContext || window.webkitAudioContext)],
+      ['AudioWorklet', () => typeof AudioWorklet !== 'undefined'],
+      ['MediaDevices', () => !!navigator.mediaDevices],
+      ['getUserMedia', () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)],
+      ['getDisplayMedia', () => !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)],
+      ['MediaRecorder', () => typeof MediaRecorder === 'function'],
+      ['MediaSource', () => typeof MediaSource === 'function'],
+      ['ManagedMediaSource', () => typeof ManagedMediaSource === 'function'],
+      ['MediaCapabilities', () => !!navigator.mediaCapabilities],
+      ['WebCodecs (VideoEncoder)', () => typeof VideoEncoder === 'function'],
+      ['Picture-in-Picture', () => typeof HTMLVideoElement !== 'undefined' && 'requestPictureInPicture' in HTMLVideoElement.prototype],
+      ['Document PiP', () => !!window.documentPictureInPicture],
+      ['Fullscreen API', () => typeof Element !== 'undefined' && 'requestFullscreen' in Element.prototype],
+      ['Canvas Capture Stream', () => typeof HTMLCanvasElement !== 'undefined' && 'captureStream' in HTMLCanvasElement.prototype],
+      ['Speech Synthesis', () => !!window.speechSynthesis],
+      ['Speech Recognition', () => !!(window.SpeechRecognition || window.webkitSpeechRecognition)],
+      ['WebXR', () => !!navigator.xr]
+    ],
+    '存储与文件': [
+      ['localStorage', () => !!window.localStorage],
+      ['sessionStorage', () => !!window.sessionStorage],
+      ['IndexedDB', () => !!window.indexedDB],
+      ['CacheStorage', () => !!window.caches],
+      ['Storage API', () => !!navigator.storage],
+      ['Storage Buckets', () => !!navigator.storageBuckets],
+      ['OPFS', () => !!(navigator.storage && navigator.storage.getDirectory)],
+      ['File System Access', () => typeof window.showOpenFilePicker === 'function'],
+      ['FileReader', () => typeof FileReader === 'function'],
+      ['Drag and Drop', () => 'ondrop' in window],
+      ['Clipboard API', () => !!navigator.clipboard],
+      ['Web Share', () => !!navigator.share]
+    ],
+    '硬件、传感器与系统': [
+      ['Gamepad API', () => !!navigator.getGamepads],
+      ['Vibration API', () => !!navigator.vibrate],
+      ['Battery Status', () => !!navigator.getBattery],
+      ['Network Information', () => !!navigator.connection],
+      ['Geolocation', () => !!navigator.geolocation],
+      ['Device Orientation', () => 'DeviceOrientationEvent' in window],
+      ['Device Motion', () => 'DeviceMotionEvent' in window],
+      ['Ambient Light Sensor', () => 'AmbientLightSensor' in window],
+      ['Gyroscope', () => 'Gyroscope' in window],
+      ['Accelerometer', () => 'Accelerometer' in window],
+      ['Magnetometer', () => 'Magnetometer' in window],
+      ['Proximity Sensor', () => 'ProximitySensor' in window],
+      ['Bluetooth', () => !!navigator.bluetooth],
+      ['USB', () => !!navigator.usb],
+      ['Serial', () => !!navigator.serial],
+      ['HID', () => !!navigator.hid],
+      ['NFC', () => 'NDEFReader' in window],
+      ['Idle Detection', () => typeof window.IdleDetector !== 'undefined'],
+      ['Screen Wake Lock', () => !!navigator.wakeLock],
+      ['Screen Orientation Lock', () => !!(screen.orientation && screen.orientation.lock)],
+      ['Multi-Screen Window Placement', () => typeof window.getScreenDetails === 'function'],
+      ['Window Controls Overlay', () => !!navigator.windowControlsOverlay],
+      ['EyeDropper', () => typeof window.EyeDropper === 'function'],
+      ['Contact Picker', () => !!navigator.contacts],
+      ['Local Font Access', () => typeof window.queryLocalFonts === 'function'],
+      ['Compute Pressure', () => typeof PressureObserver === 'function']
+    ],
+    '安全、支付与隐私': [
+      ['WebAuthn', () => !!window.PublicKeyCredential],
+      ['Credential Management', () => !!navigator.credentials],
+      ['Payment Request', () => !!window.PaymentRequest],
+      ['WebDriver', () => navigator.webdriver === true],
+      ['Permissions API', () => !!navigator.permissions],
+      ['Notifications', () => !!window.Notification],
+      ['Storage Access API', () => typeof document.requestStorageAccess === 'function'],
+      ['FedCM', () => !!window.IdentityCredential],
+      ['Fenced Frames', () => typeof window.FencedFrameConfig === 'function'],
+      ['Private Aggregation', () => !!window.privateAggregation]
+    ],
+    'Intl 国际化': [
+      ['Intl', () => typeof Intl !== 'undefined'],
+      ['Intl.DateTimeFormat', () => !!Intl.DateTimeFormat],
+      ['Intl.NumberFormat', () => !!Intl.NumberFormat],
+      ['Intl.Collator', () => !!Intl.Collator],
+      ['Intl.PluralRules', () => !!Intl.PluralRules],
+      ['Intl.RelativeTimeFormat', () => !!Intl.RelativeTimeFormat],
+      ['Intl.ListFormat', () => !!Intl.ListFormat],
+      ['Intl.Segmenter', () => !!Intl.Segmenter],
+      ['Intl.DisplayNames', () => !!Intl.DisplayNames],
+      ['Intl.Locale.getWeekInfo', () => typeof Intl.Locale !== 'undefined' && typeof Intl.Locale.prototype.getWeekInfo === 'function']
+    ]
+  };
+  for (const [group, items] of Object.entries(groups)) {
+    add('features', group, items.map(([name, fn]) => ({ name, ok: safeBool(fn) })), '实测 · typeof / 属性存在性检测', { type: 'features' });
+  }
+}
+
+function collectCSS() {
+  const items = [
+    ['display: grid', () => CSS.supports('display', 'grid')],
+    ['display: flex', () => CSS.supports('display', 'flex')],
+    ['grid-template-columns: subgrid', () => CSS.supports('grid-template-columns', 'subgrid')],
+    ['gap', () => CSS.supports('gap', '1px')],
+    ['aspect-ratio', () => CSS.supports('aspect-ratio', '1 / 1')],
+    ['backdrop-filter', () => CSS.supports('backdrop-filter', 'blur(1px)')],
+    ['container-type', () => CSS.supports('container-type', 'inline-size')],
+    ['selector(:has())', () => CSS.supports('selector(:has(*))')],
+    ['selector(:is())', () => CSS.supports('selector(:is(a))')],
+    ['selector(:where())', () => CSS.supports('selector(:where(a))')],
+    ['selector(&) nesting', () => CSS.supports('selector(&)')],
+    ['color: oklch()', () => CSS.supports('color', 'oklch(0.7 0.1 200)')],
+    ['color: lab()', () => CSS.supports('color', 'lab(50% 40 20)')],
+    ['color: color(display-p3)', () => CSS.supports('color', 'color(display-p3 1 0 0)')],
+    ['color-mix()', () => CSS.supports('color', 'color-mix(in srgb, red, blue)')],
+    ['light-dark()', () => CSS.supports('color', 'light-dark(white, black)')],
+    ['hwb()', () => CSS.supports('color', 'hwb(0 0% 0%)')],
+    ['text-wrap: balance', () => CSS.supports('text-wrap', 'balance')],
+    ['text-wrap: pretty', () => CSS.supports('text-wrap', 'pretty')],
+    ['view-transition-name', () => CSS.supports('view-transition-name', 'none')],
+    ['scroll-behavior: smooth', () => CSS.supports('scroll-behavior', 'smooth')],
+    ['position: sticky', () => CSS.supports('position', 'sticky')],
+    ['overscroll-behavior', () => CSS.supports('overscroll-behavior', 'contain')],
+    ['scrollbar-gutter', () => CSS.supports('scrollbar-gutter', 'stable')],
+    ['accent-color', () => CSS.supports('accent-color', 'red')],
+    ['forced-color-adjust', () => CSS.supports('forced-color-adjust', 'none')],
+    ['prefers-reduced-motion', () => matchMedia('(prefers-reduced-motion: reduce)').matches],
+    ['prefers-color-scheme', () => matchMedia('(prefers-color-scheme: dark)').matches]
+  ];
+  add('css', '特性支持（✓=支持）', items.map(([name, fn]) => ({ name, ok: safeBool(fn) })), '实测 · CSS.supports / matchMedia', { type: 'features' });
+  add('css', 'CSS.supports 可用', typeof CSS !== 'undefined' && typeof CSS.supports === 'function', 'typeof CSS.supports');
+}
+
+function addLimitNotes() {
+  const notes = [
+    '纯静态网页无法读取：HTTP 请求头、TLS 版本与加密套件、完整 CPU 型号、GPU 驱动版本、电池健康度、真实内网 IP（现代浏览器以 mDNS 隐藏）、宿主应用包名。这些项目未在本页伪造。',
+    '浏览器内核版本主要来自 UA 与 UA-CH：Chrome 的 UA 版本号通常被简化为 x.0.0.0，本页优先显示 UA-CH uaFullVersion 的精确版本，并在来源列标明。',
+    'Android WebView、iPadOS 桌面模式、应用内浏览器的判定属于“推断”，依据为 UA 信号组合与触点数，相关行已注明推断依据。',
+    '字体检测通过“指定字体 + 回退基线字体”的文本宽度差异实现，只能判断疑似安装，不能读取字体文件版本，也可能漏检与基线度量完全一致的字体。',
+    'Canvas / Audio / WebGL / 字体 / 布局哈希均在本机计算，不上传。它们在同一设备同一浏览器内通常稳定，但会随浏览器版本、GPU 驱动、系统字体变化。',
+    '综合指纹额外包含 UA 与引擎版本，浏览器升级后必然变化；需要跨版本比较时请使用“稳定设备指纹”。',
+    '公网 IP 与归属地来自第三方接口（api.ipify.org、api64.ipify.org、ipwho.is、ipinfo.io），属于本页唯一的外部网络请求；接口限流、CORS 或网络受限时本页会如实显示失败。',
+    '权限状态为查询时刻的浏览器记录值，不代表用户此刻一定会授权；本页不会主动弹窗申请摄像头、麦克风、定位等权限。',
+    '页面为 GitHub Pages 静态托管，无后端、无数据库、无日志收集。'
+  ];
+  for (const n of notes) addNote('limits', n);
+}
+
+async function finalize() {
+  const stable = {
+    canvas: FP.canvas || null,
+    audio: FP.audioHash || null,
+    webgl: FP.webgl || null,
+    layout: FP.layoutHash || null,
+    fonts: FP.fontsHash || null,
+    screen: [screen.width, screen.height, screen.availWidth, screen.availHeight, screen.colorDepth],
+    dpr: Number(devicePixelRatio.toFixed(3)),
+    cores: navigator.hardwareConcurrency || null,
+    memory: navigator.deviceMemory || null,
+    touch: navigator.maxTouchPoints,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    languages: navigator.languages,
+    platform: navigator.platform
+  };
+  const composite = {
+    ...stable,
+    ua: navigator.userAgent,
+    uaFullVersion: uaHigh ? (uaHigh.uaFullVersion || null) : null,
+    engine: SUMMARY.engine
+  };
+  SUMMARY.hashes.stable = await sha256(JSON.stringify(stable));
+  SUMMARY.hashes.composite = await sha256(JSON.stringify(composite));
+
+  add('hashes', '稳定设备指纹（SHA-256）', SUMMARY.hashes.stable, 'SHA-256(稳定字段 JSON)', { copy: true });
+  add('hashes', '综合指纹（含 UA 版本，SHA-256）', SUMMARY.hashes.composite, 'SHA-256(稳定字段 + UA / 引擎版本)', { copy: true });
+  add('hashes', '稳定指纹输入字段', Object.keys(stable), '说明');
+  add('hashes', '哈希算法', 'SHA-256（Web Crypto API）', 'crypto.subtle.digest');
+
+  META.durationMs = Math.round(performance.now() - META.startedAt);
+  SUMMARY.duration = META.durationMs + ' ms';
+  add('page', '本次采集耗时', SUMMARY.duration, 'performance.now()');
+
+  for (const def of SEC_DEFS) {
+    STATE.get(def.id).done = true;
+  }
+  render();
+}
+
+async function main() {
+  META.startedAt = performance.now();
+  META.generatedAt = new Date().toISOString();
+  META.pageUrl = location.href;
+  META.referrer = document.referrer;
+  SUMMARY.tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  SUMMARY.lang = (navigator.languages || [navigator.language]).join(', ');
+  SUMMARY.screen = `${screen.width}×${screen.height} · DPR ${devicePixelRatio}`;
+  addLimitNotes();
+  render();
+
+  await run('浏览器与内核', collectBrowser);
+
+  runSync('系统 / 硬件', collectHardware);
+  runSync('屏幕', collectScreen);
+  runSync('语言与时区', collectLocale);
+  runSync('页面', collectPage);
+  runSync('插件', collectPlugins);
+  runSync('特性检测', collectFeatures);
+  runSync('CSS 检测', collectCSS);
+  await run('WebGL / WebGPU', collectGraphics);
+  render();
+
+  await Promise.allSettled([
+    run('指纹哈希', collectHashes),
+    run('音频', collectAudio),
+    run('媒体', collectMedia),
+    run('权限', collectPermissions),
+    run('存储', collectStorage),
+    run('网络', collectNetwork),
+    run('WebRTC', collectWebRTC),
+    run('公网 IP', collectPublicIP),
+    run('隐私', collectPrivacy),
+    run('电池', collectBattery)
+  ]);
+
+  await finalize();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', main);
+} else {
+  main();
+}
+})();
+</script>
+</body>
+</html>
