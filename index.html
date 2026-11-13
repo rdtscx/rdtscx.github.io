@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rdtscx</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --panel:#fff; --line:#e6e9ef; --text:#1e2733;
+    --muted:#5f6b7a; --dim:#8d97a5; --accent:#3f6fd8;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);color:var(--text);padding:24px;
+    font-family:"Segoe UI",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  main{
+    width:100%;max-width:520px;background:var(--panel);
+    border:1px solid var(--line);border-radius:14px;padding:32px 34px;
+  }
+  h1{font-size:22px;font-weight:650;margin:0 0 6px;letter-spacing:-.01em}
+  p{margin:0;color:var(--muted);font-size:14px;line-height:1.7}
+  .links{margin:22px 0 0;padding:0;list-style:none;border-top:1px solid var(--line)}
+  .links li{border-bottom:1px solid var(--line)}
+  .links a{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:12px 2px;color:var(--text);text-decoration:none;font-size:14px;
+  }
+  .links a:hover{color:var(--accent)}
+  .links span{color:var(--dim);font-size:12px;font-family:ui-monospace,Menlo,monospace}
+  footer{margin-top:18px;color:var(--dim);font-size:12px}
+</style>
+</head>
+<body>
+<main>
+  <h1>rdtscx</h1>
+  <p>站点根路径还没部署内容，先放一个占位页。</p>
+
+  <ul class="links">
+    <li><a href="/fp/">浏览器指纹与真实参数报告 <span>/fp/</span></a></li>
+    <li><a href="/tariff/">运营商资费监控 <span>/tariff/</span></a></li>
+    <li><a href="https://github.com/rdtscx">GitHub <span>github.com/rdtscx</span></a></li>
+  </ul>
+
+  <footer>占位页面 · 后续替换为正式内容</footer>
+</main>
+</body>
+</html>
