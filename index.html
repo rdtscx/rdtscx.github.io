@@ -116,6 +116,9 @@ html[data-theme="dark"] .topbar{background:rgba(17,22,29,.86)}
 .icon-btn:hover{background:var(--panel);color:var(--text);border-color:var(--accent-soft)}
 .icon-btn:active{transform:scale(.92)}
 .icon-btn svg{width:15px;height:15px}
+/* 统一焦点环：键盘可达，鼠标点按不出现刺眼的默认框 */
+.icon-btn:focus-visible,.chip:focus-visible,.sort:focus-visible,.copy:focus-visible,.clear:focus-visible,.state button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:focus:not(:focus-visible),select:focus:not(:focus-visible){outline:none}
 html[data-theme="dark"] .icon-sun{display:none}
 html[data-theme="light"] .icon-moon{display:none}
 
