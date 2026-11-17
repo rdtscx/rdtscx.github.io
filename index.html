@@ -187,7 +187,6 @@ async function load() {
 
 function linkFor(repo) {
   if (repo.has_pages) {
-    if (repo.name.toLowerCase() === USER + '.github.io') return { href: '/', path: '/' };
     return { href: '/' + encodeURIComponent(repo.name) + '/', path: '/' + repo.name + '/' };
   }
   return { href: repo.html_url, path: 'github.com/' + USER + '/' + repo.name };
@@ -244,7 +243,8 @@ async function run() {
   count.textContent = '加载中';
   box.appendChild(make('div', 'state', '正在读取仓库列表…'));
   try {
-    const repos = await load();
+    const all = await load();
+    const repos = all.filter((repo) => repo.name.toLowerCase() !== USER + '.github.io');
     repos.sort((a, b) => String(b.pushed_at || '').localeCompare(String(a.pushed_at || '')));
     render(repos);
   } catch (err) {
