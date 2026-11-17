@@ -64,16 +64,30 @@ a{color:inherit}
 .entry:hover{background:var(--panel2)}
 .entry:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .entry-main{min-width:0;display:block}
-.entry-title{display:block;font-size:14.5px;font-weight:600;color:var(--text);letter-spacing:.005em}
-.entry-desc{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.6}
-.entry-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.entry-title{display:block;font-size:14.5px;font-weight:600;color:var(--text);letter-spacing:.005em;word-break:break-word}
+.entry-desc{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.6;
+}
+.entry-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tag{font-size:9.5px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
 .path{
   font-family:var(--mono);font-size:10.5px;color:var(--dim);
   background:var(--panel2);border:1px solid var(--line);border-radius:999px;
-  padding:2px 9px;white-space:nowrap;
+  padding:2px 9px;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis;
 }
-.chev{width:7px;height:7px;border-top:1.5px solid var(--muted);border-right:1.5px solid var(--muted);transform:rotate(45deg);margin:0 5px;transition:transform .2s,border-color .2s}
+.chev{width:7px;height:7px;border-top:1.5px solid var(--muted);border-right:1.5px solid var(--muted);transform:rotate(45deg);margin:0 5px;transition:transform .2s,border-color .2s;flex-shrink:0}
 .entry:hover .chev{transform:rotate(45deg) translate(2px,-2px);border-color:var(--accent)}
+
+/* states */
+.state{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:18px;color:var(--dim);font-size:12px}
+.state button{
+  font:inherit;font-size:11.5px;color:#354356;background:#fff;
+  border:1px solid var(--line);border-radius:7px;padding:4px 10px;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;
+}
+.state button:hover{border-color:#c9d3e2;color:#16202c;background:#fbfcfe}
+.note{margin:8px 0 0;font-size:10.5px;color:var(--dim)}
 
 /* footer */
 footer{color:var(--dim);font-size:10.5px;margin-top:28px;line-height:1.7;border-top:1px solid var(--line);padding-top:14px}
@@ -116,43 +130,130 @@ footer a:hover{color:var(--accent);border-bottom-color:#c7d7f2}
     <div class="hero-meta">
       <span>GitHub Pages</span>
       <span>静态站点</span>
-      <span>2 个子项目</span>
+      <span>公开仓库</span>
     </div>
   </section>
 
   <div class="sec-head">
-    <h2>站点索引</h2>
-    <span>3 项</span>
+    <h2>仓库索引</h2>
+    <span id="repo-count">加载中</span>
   </div>
 
-  <div class="index">
-    <a class="entry" href="/fp/">
-      <span class="entry-main">
-        <span class="entry-title">浏览器指纹与真实参数报告</span>
-        <span class="entry-desc">浏览器、系统、屏幕、网络等真实参数采集，Canvas / WebGL / 字体指纹哈希全部在本机计算。</span>
-      </span>
-      <span class="entry-right"><code class="path">/fp/</code><i class="chev"></i></span>
-    </a>
-    <a class="entry" href="/tariff/">
-      <span class="entry-main">
-        <span class="entry-title">运营商资费监控</span>
-        <span class="entry-desc">运营商资费数据抓取、变更检测与推送，覆盖个人与政企资费。</span>
-      </span>
-      <span class="entry-right"><code class="path">/tariff/</code><i class="chev"></i></span>
-    </a>
-    <a class="entry" href="https://github.com/rdtscx">
-      <span class="entry-main">
-        <span class="entry-title">GitHub</span>
-        <span class="entry-desc">账号主页与全部开源仓库。</span>
-      </span>
-      <span class="entry-right"><code class="path">github.com/rdtscx</code><i class="chev"></i></span>
-    </a>
-  </div>
+  <div class="index" id="repo-index"></div>
+  <noscript><div class="state">仓库索引需要启用 JavaScript，可直接访问 <a href="https://github.com/rdtscx?tab=repositories">GitHub 仓库列表</a>。</div></noscript>
+  <p class="note">列表由 GitHub API 实时读取，仓库新增或删除后刷新页面即同步；启用 Pages 的仓库指向其站点路径，其余指向 GitHub 仓库页。</p>
 
   <footer>
     <p>rdtscx · GitHub Pages 静态站点</p>
     <p>仓库：<a href="https://github.com/rdtscx/rdtscx.github.io">github.com/rdtscx/rdtscx.github.io</a></p>
   </footer>
 </main>
+
+<script>
+(() => {
+'use strict';
+
+const USER = 'rdtscx';
+const ENDPOINT = 'https://api.github.com/users/' + USER + '/repos?per_page=100&sort=pushed';
+const box = document.getElementById('repo-index');
+const count = document.getElementById('repo-count');
+
+const make = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+};
+
+const nextUrl = (link) => {
+  if (!link) return null;
+  const m = link.match(/<([^>]+)>\s*;\s*rel="next"/);
+  return m ? m[1] : null;
+};
+
+async function load() {
+  const repos = [];
+  let url = ENDPOINT;
+  for (let page = 0; url && page < 10; page++) {
+    const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const batch = await res.json();
+    if (!Array.isArray(batch)) throw new Error('响应格式异常');
+    repos.push(...batch);
+    url = nextUrl(res.headers.get('Link'));
+  }
+  return repos;
+}
+
+function linkFor(repo) {
+  if (repo.has_pages) {
+    if (repo.name.toLowerCase() === USER + '.github.io') return { href: '/', path: '/' };
+    return { href: '/' + encodeURIComponent(repo.name) + '/', path: '/' + repo.name + '/' };
+  }
+  return { href: repo.html_url, path: 'github.com/' + USER + '/' + repo.name };
+}
+
+function entry(repo) {
+  const target = linkFor(repo);
+  const a = make('a', 'entry');
+  a.href = target.href;
+
+  const main = make('span', 'entry-main');
+  main.appendChild(make('span', 'entry-title', repo.name));
+  main.appendChild(make('span', 'entry-desc', repo.description || '暂无描述'));
+  a.appendChild(main);
+
+  const right = make('span', 'entry-right');
+  if (repo.fork) right.appendChild(make('span', 'tag', 'Fork'));
+  if (repo.archived) right.appendChild(make('span', 'tag', '已归档'));
+  const path = make('code', 'path', target.path);
+  path.title = target.href;
+  right.appendChild(path);
+  right.appendChild(make('i', 'chev'));
+  a.appendChild(right);
+  return a;
+}
+
+function render(repos) {
+  box.textContent = '';
+  count.textContent = repos.length + ' 个';
+  if (!repos.length) {
+    box.appendChild(make('div', 'state', '没有可展示的公开仓库'));
+    return;
+  }
+  repos.forEach((repo) => box.appendChild(entry(repo)));
+}
+
+function fail(err) {
+  box.textContent = '';
+  count.textContent = '—';
+  const state = make('div', 'state');
+  const reason = err && err.message === 'HTTP 403'
+    ? 'GitHub API 请求受限，请稍后重试'
+    : '仓库列表加载失败（' + (err && err.message ? err.message : '未知错误') + '）';
+  state.appendChild(make('span', '', reason));
+  const retry = make('button', '', '重试');
+  retry.type = 'button';
+  retry.addEventListener('click', run);
+  state.appendChild(retry);
+  box.appendChild(state);
+}
+
+async function run() {
+  box.textContent = '';
+  count.textContent = '加载中';
+  box.appendChild(make('div', 'state', '正在读取仓库列表…'));
+  try {
+    const repos = await load();
+    repos.sort((a, b) => String(b.pushed_at || '').localeCompare(String(a.pushed_at || '')));
+    render(repos);
+  } catch (err) {
+    fail(err);
+  }
+}
+
+run();
+})();
+</script>
 </body>
 </html>
