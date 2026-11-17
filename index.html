@@ -156,7 +156,9 @@ a{color:inherit}
   transition:border-color .15s,color .15s;
 }
 .sort:hover{color:var(--text);border-color:var(--accent-soft)}
-.count{font-size:10.5px;color:var(--dim);font-family:var(--mono);white-space:nowrap}
+.count{font-size:10.5px;color:var(--dim);font-family:var(--mono);white-space:nowrap;font-weight:400;margin-left:7px}
+.chips-row{display:flex;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.chips-row > * + *{margin-left:8px}
 
 /* ---------- 列表 ---------- */
 .index{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
@@ -192,7 +194,7 @@ a{color:inherit}
 /* 复制按钮：默认隐形，悬停/聚焦/触屏常显 */
 .copy{
   width:26px;height:26px;display:grid;place-items:center;flex-shrink:0;
-  border:1px solid transparent;border-radius:7px;background:none;color:var(--dim);
+  border:1px solid transparent;border-radius:7px;background:none;color:var(--muted);
   cursor:pointer;opacity:0;transform:scale(.92);
   transition:opacity .16s,transform .16s var(--ease),color .16s,background .16s,border-color .16s;
 }
@@ -315,19 +317,20 @@ html[data-theme="dark"] .toast{background:#e6ebf2;color:#11161d}
   </section>
 
   <div class="sec-head">
-    <h2>仓库索引</h2>
-    <div class="chips" id="chips" role="group" aria-label="筛选仓库">
-      <button class="chip" type="button" data-filter="all" aria-pressed="true">全部 <b id="c-all"></b></button>
-      <button class="chip" type="button" data-filter="pages" aria-pressed="false">有站点 <b id="c-pages"></b></button>
-      <button class="chip" type="button" data-filter="repo" aria-pressed="false">仅仓库 <b id="c-repo"></b></button>
-    </div>
+    <h2>仓库索引<span class="count" id="repo-count">加载中</span></h2>
     <span class="grow"></span>
     <select class="sort" id="sort" aria-label="排序方式">
       <option value="pushed">最近推送</option>
       <option value="name">名称 A-Z</option>
       <option value="stars">Star 数</option>
     </select>
-    <span class="count" id="repo-count">加载中</span>
+  </div>
+  <div class="chips-row">
+    <div class="chips" id="chips" role="group" aria-label="筛选仓库">
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">全部 <b id="c-all"></b></button>
+      <button class="chip" type="button" data-filter="pages" aria-pressed="false">有站点 <b id="c-pages"></b></button>
+      <button class="chip" type="button" data-filter="repo" aria-pressed="false">仅仓库 <b id="c-repo"></b></button>
+    </div>
   </div>
 
   <div class="index" id="repo-index"></div>
