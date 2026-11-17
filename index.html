@@ -121,11 +121,11 @@ a{color:inherit}
 .hero h1 .dot{margin-left:9px}
 .hero h1 .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(22,163,74,.4);animation:pulse 2.8s var(--ease) infinite}
 .hero-sub{margin:8px 0 0;font-size:12px;line-height:1.7;color:var(--muted);max-width:56ch}
-.stats{display:flex;flex-wrap:wrap;margin-top:14px;font-size:11px;color:var(--dim)}
-.stats > * + *{margin-left:16px}
-.stats span{display:inline-flex;align-items:baseline}
-.stats b{margin-left:5px}
-.stats b{color:var(--text);font-size:13px;font-weight:600;font-family:var(--mono)}
+.stats{display:flex;flex-wrap:wrap;margin-top:14px;font-size:11px;line-height:1.5;color:var(--dim)}
+.stats > * + *{margin-left:18px}
+.stats span{display:inline-flex;align-items:baseline;white-space:nowrap}
+/* 三项统一字号、字重与字体：标签 11px 灰，数值 13px 正文色 */
+.stats b{margin-left:5px;color:var(--text);font-size:13px;font-weight:600;font-family:inherit;font-variant-numeric:tabular-nums}
 
 .sec-head{display:flex;align-items:center;flex-wrap:wrap;margin:22px 0 10px}
 .sec-head > * + *{margin-left:12px}
@@ -297,11 +297,11 @@ html[data-theme="dark"] .toast{background:#e6ebf2;color:#11161d}
 <main class="wrap">
   <section class="hero">
     <h1>rdtscx <span class="dot" aria-hidden="true"></span></h1>
-    <p class="hero-sub">站点根路径为整体仓库部署内容。下方索引由 GitHub API 实时读取。</p>
+    <p class="hero-sub">站点由 GitHub API 读取。</p>
     <div class="stats">
       <span>仓库<b id="stat-total">—</b></span>
       <span>站点<b id="stat-pages">—</b></span>
-      <span>更新于<b id="stat-updated">—</b></span>
+      <span>活跃于<b id="stat-updated">—</b></span>
     </div>
   </section>
 
