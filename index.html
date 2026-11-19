@@ -353,6 +353,12 @@ function setLink(s) {
      状态灯同时写内联值，保证绿/红一定生效 */
   linkDot.style.background = LINK_BG[s] || '';
   linkDot.style.boxShadow = LINK_RING[s] || '';
+  /* 个别 WebView 内核对已存在节点改 class/内联样式后不立即重绘，
+     一次同步的隐藏→读布局→恢复可强制刷新，避免状态灯颜色滞留在旧值 */
+  var _disp = linkDot.style.display;
+  linkDot.style.display = 'none';
+  void linkDot.offsetWidth;
+  linkDot.style.display = _disp;
 }
 
 const state = { repos: [], q: '', filter: 'all', sort: 'pushed', focus: -1 };
