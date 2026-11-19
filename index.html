@@ -342,11 +342,17 @@ const topbar = document.getElementById('topbar');
 const linkDot = document.getElementById('linkStatus');
 
 const LINK_TEXT = { ok: '已连接仓库', err: '仓库连接断开', wait: '正在连接仓库' };
+const LINK_BG = { ok: '#16a34a', err: '#dc2626', wait: '' };
+const LINK_RING = { ok: '0 0 0 3px rgba(22,163,74,.16)', err: '0 0 0 3px rgba(220,38,38,.16)', wait: '' };
 function setLink(s) {
   if (!linkDot) return;
   linkDot.className = 'status ' + s;
   linkDot.title = LINK_TEXT[s] || '';
   linkDot.setAttribute('aria-label', LINK_TEXT[s] || '');
+  /* 部分内核在元素创建后动态切 class 时不重算样式，导致颜色不变；
+     状态灯同时写内联值，保证绿/红一定生效 */
+  linkDot.style.background = LINK_BG[s] || '';
+  linkDot.style.boxShadow = LINK_RING[s] || '';
 }
 
 const state = { repos: [], q: '', filter: 'all', sort: 'pushed', focus: -1 };
