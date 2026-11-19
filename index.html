@@ -82,6 +82,16 @@ html[data-theme="dark"] .topbar{background:rgba(17,22,29,.86)}
 .brand:hover .logo{transform:rotate(-6deg) scale(1.04)}
 .brand strong{display:block;font-size:13.5px;font-weight:600;letter-spacing:.01em}
 .brand small{display:block;color:var(--dim);font-size:10.5px}
+/* 仓库连接状态灯：连接中灰闪、已连接绿、断开红 */
+.status{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  margin-left:7px;vertical-align:1px;background:var(--dim);
+  transition:background .2s var(--ease),box-shadow .2s var(--ease);
+}
+.status.ok{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.16)}
+.status.err{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.16)}
+.status.wait{background:var(--dim);animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 
 .tools{margin-left:auto;display:flex;align-items:center;min-width:0}
 .search{
@@ -258,7 +268,7 @@ html[data-theme="dark"] .toast{background:#e6ebf2;color:#11161d}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  .entry,.copy.done .i-done,.skel-line{animation:none!important}
+  .entry,.copy.done .i-done,.skel-line,.status{animation:none!important}
   .entry,.copy,.chip,.state button,.toast,.topbar,.logo{transition:none!important}
 }
 </style>
@@ -268,7 +278,7 @@ html[data-theme="dark"] .toast{background:#e6ebf2;color:#11161d}
   <div class="topbar-inner">
     <a class="brand" href="https://github.com/rdtscx" aria-label="打开 rdtscx 的 GitHub 主页">
       <span class="logo">R</span>
-      <div><strong>导航</strong><small>站点索引</small></div>
+      <div><strong>导航<span class="status wait" id="linkStatus" role="status" aria-live="polite" aria-label="正在连接仓库"></span></strong><small>站点索引</small></div>
     </a>
 
     <div class="tools">
@@ -329,6 +339,15 @@ const toastEl = document.getElementById('toast');
 const sortEl = document.getElementById('sort');
 const chipsEl = document.getElementById('chips');
 const topbar = document.getElementById('topbar');
+const linkDot = document.getElementById('linkStatus');
+
+const LINK_TEXT = { ok: '已连接仓库', err: '仓库连接断开', wait: '正在连接仓库' };
+function setLink(s) {
+  if (!linkDot) return;
+  linkDot.className = 'status ' + s;
+  linkDot.title = LINK_TEXT[s] || '';
+  linkDot.setAttribute('aria-label', LINK_TEXT[s] || '');
+}
 
 const state = { repos: [], q: '', filter: 'all', sort: 'pushed', focus: -1 };
 
@@ -664,6 +683,7 @@ function failure(err) {
 }
 
 async function start(force) {
+  setLink('wait');
   const cached = force ? null : readCache();
   if (cached && cached.length) {
     state.repos = cached;
@@ -679,7 +699,9 @@ async function start(force) {
     writeCache(repos);
     stats(repos);
     render();
+    setLink('ok');
   } catch (err) {
+    setLink('err');
     if (!cached) failure(err);
     else toast('刷新失败，正在展示缓存');
   }
