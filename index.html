@@ -744,6 +744,26 @@ async function start(force) {
 }
 
 start(false);
+
+/* 长时间停留时定期重拉，避免时间和列表停在打开页时的旧值 */
+let lastFetch = Date.now();
+async function refresh() {
+  if (document.hidden) return;
+  if (Date.now() - lastFetch < 60 * 1000) return;   // 防抖，避免频繁切标签耗尽接口配额
+  lastFetch = Date.now();
+  try {
+    const repos = await fetchRepos();
+    const sig = (list) => list.map((r) => r.name + ':' + r.pushed_at).join('|');
+    if (sig(repos) === sig(state.repos)) { state.repos = repos; writeCache(repos); return; }
+    state.repos = repos;
+    writeCache(repos);
+    stats(repos);
+    render();
+    setLink('ok');
+  } catch (e) { /* 静默失败：保留当前列表 */ }
+}
+setInterval(refresh, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 })();
 </script>
 </body>
