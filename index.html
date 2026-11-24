@@ -156,17 +156,29 @@ a{color:inherit}
 /* ---------- 列表 ---------- */
 .index{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
 .entry{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:13px 18px;border-top:1px solid var(--line2);text-decoration:none;
-  transition:background .16s,transform .14s var(--ease);
+  border-top:1px solid var(--line2);
+  transition:background .16s;
   animation:rise .34s var(--ease) both;
   animation-delay:calc(var(--i,0) * 26ms);
+  cursor:pointer;
 }
 .entry:first-child{border-top:0}
 .entry:hover{background:var(--panel2)}
-.entry:active{transform:scale(.997)}
-.entry:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:var(--panel2)}
-.entry-main{min-width:0;display:block;margin-right:16px}
+.entry-row{display:flex;align-items:center;justify-content:space-between;padding:13px 18px}
+.entry-main{min-width:0;flex:1;display:block;margin-right:16px;text-decoration:none;color:inherit}
+.entry-main:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px}
+.entry-main-inner{display:block;min-width:0}
+/* 软件版本下载行：版本号直接点击下载对应文件 */
+.verrow{display:flex;flex-wrap:wrap;align-items:center;padding:0 18px 13px}
+.verrow .vlabel{font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-right:9px}
+.ver{display:inline-flex;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--accent);background:var(--accent-soft);border:1px solid transparent;border-radius:7px;padding:2px 8px;margin:3px 6px 0 0;text-decoration:none;transition:background .15s,color .15s,transform .12s var(--ease),border-color .15s}
+.ver:hover{background:var(--accent);color:#fff}
+.ver:active{transform:scale(.94)}
+.ver:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ver.latest{font-weight:600}
+.ver .vsize{opacity:.72;margin-left:5px;font-size:9.5px}
+.ver:hover .vsize{opacity:.9}
+html[data-theme="dark"] .ver:hover{color:#0f1319}
 .entry-title{display:block;font-size:14.5px;font-weight:600;color:var(--text);letter-spacing:.005em;word-break:break-word}
 .entry-desc{
   display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -176,6 +188,7 @@ a{color:inherit}
 .entry-right > * + *{margin-left:10px}
 .tag{font-size:9.5px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
 .tag.site{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-soft)}
+.tag.app{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-soft)}
 .meta{display:inline-flex;align-items:center;font-size:10.5px;color:var(--dim);font-family:var(--mono);white-space:nowrap}
 .meta .lang-dot{margin-right:5px}
 .ago{font-size:10.5px;color:var(--dim);font-family:var(--mono);white-space:nowrap}
@@ -259,7 +272,8 @@ html[data-theme="dark"] .toast{background:#e6ebf2;color:#11161d}
   .brand small{display:none}
   .search input{width:min(34vw,150px)}
   .wrap{padding:14px 12px 44px}
-  .entry{padding:12px 14px}
+  .entry-row{padding:12px 14px}
+  .verrow{padding:0 14px 12px}
   .entry-right > * + *{margin-left:7px}
   .sec-head > * + *{margin-left:8px}
 }
@@ -308,6 +322,7 @@ html[data-theme="dark"] .toast{background:#e6ebf2;color:#11161d}
     <div class="chips" id="chips" role="group" aria-label="筛选仓库">
       <button class="chip" type="button" data-filter="all" aria-pressed="true">全部 <b id="c-all"></b></button>
       <button class="chip" type="button" data-filter="pages" aria-pressed="false">有站点 <b id="c-pages"></b></button>
+      <button class="chip" type="button" data-filter="app" aria-pressed="false">软件 <b id="c-app"></b></button>
       <button class="chip" type="button" data-filter="repo" aria-pressed="false">仅仓库 <b id="c-repo"></b></button>
     </div>
   </div>
@@ -331,6 +346,9 @@ const USER = 'rdtscx';
 const ENDPOINT = 'https://api.github.com/users/' + USER + '/repos?per_page=100&sort=pushed';
 const CACHE_KEY = 'rdtscx.repos.v1';
 const CACHE_TTL = 5 * 60 * 1000;         // 5 分钟内直接用缓存，后台静默刷新
+/* 软件类仓库的版本与直链下载：构建时预先从 GitHub Releases 拉取并内联，
+   保证打开页面即可点击版本号直接下载对应 APK，不依赖额外 API 请求 */
+const RELEASES = {"sii-browser-backup":[{"tag":"v1.6.1","name":"Sii 1.6.1","date":"2026-11-17T06:44:58Z","assets":[{"name":"Sii-1.6.1-release.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.6.1/Sii-1.6.1-release.apk","size":34430233}]},{"tag":"v1.6.0","name":"Sii 1.6.0","date":"2026-11-16T04:57:52Z","assets":[{"name":"Sii-1.6.0-release.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.6.0/Sii-1.6.0-release.apk","size":34398941}]},{"tag":"v1.5.9","name":"Sii 1.5.9","date":"2026-11-16T04:57:58Z","assets":[{"name":"Sii-1.5.9.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.9/Sii-1.5.9.apk","size":34390061}]},{"tag":"v1.5.3","name":"Sii 1.5.3","date":"2026-11-07T04:49:32Z","assets":[{"name":"Sii-1.5.3.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.3/Sii-1.5.3.apk","size":21105450}]},{"tag":"v1.5.2","name":"Sii 1.5.2","date":"2026-11-06T05:19:49Z","assets":[{"name":"Sii-1.5.2.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.2/Sii-1.5.2.apk","size":21087438}]},{"tag":"v1.5.1","name":"Sii 1.5.1","date":"2026-11-05T08:25:40Z","assets":[{"name":"Sii-1.5.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.1/Sii-1.5.1.apk","size":21063762}]},{"tag":"v1.5.0","name":"Sii 1.5.0","date":"2026-11-05T08:25:46Z","assets":[{"name":"Sii-1.5.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.0/Sii-1.5.0.apk","size":21058690}]},{"tag":"v1.4.0","name":"Sii 1.4.0","date":"2026-11-02T15:30:30Z","assets":[{"name":"Sii-1.4.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.4.0/Sii-1.4.0.apk","size":21034346}]},{"tag":"v1.3.3","name":"Sii 1.3.3","date":"2026-11-05T08:25:52Z","assets":[{"name":"Sii-1.3.3.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.3/Sii-1.3.3.apk","size":20787615}]},{"tag":"v1.3.2","name":"Sii 1.3.2","date":"2026-11-05T08:25:57Z","assets":[{"name":"Sii-1.3.2.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.2/Sii-1.3.2.apk","size":20787735}]},{"tag":"v1.3.1","name":"Sii 1.3.1","date":"2026-11-05T08:26:02Z","assets":[{"name":"Sii-1.3.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.1/Sii-1.3.1.apk","size":20787987}]},{"tag":"v1.3.0","name":"Sii 1.3.0","date":"2026-11-05T08:26:08Z","assets":[{"name":"Sii-1.3.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.0/Sii-1.3.0.apk","size":20766995}]},{"tag":"v1.2.1","name":"Sii 1.2.1","date":"2026-11-05T08:26:14Z","assets":[{"name":"Sii-1.2.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.2.1/Sii-1.2.1.apk","size":20745791}]},{"tag":"v1.2.0","name":"Sii 1.2.0","date":"2026-11-05T08:26:19Z","assets":[{"name":"Sii-1.2.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.2.0/Sii-1.2.0.apk","size":20745491}]},{"tag":"v1.1.0","name":"Sii 1.1.0","date":"2026-11-05T08:26:25Z","assets":[{"name":"Sii-1.1.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.1.0/Sii-1.1.0.apk","size":20728715}]},{"tag":"v1.0.0","name":"Sii 1.0.0","date":"2026-11-05T08:26:30Z","assets":[{"name":"Sii-1.0.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.0.0/Sii-1.0.0.apk","size":20684959}]}],"AccessibilityManagerPro":[{"tag":"v7.0.3","name":"7.0.3 — 无障碍管理器Pro","date":"2026-11-05T10:03:18Z","assets":[{"name":"AccessibilityManagerPro-v7.0.3.apk","url":"https://github.com/rdtscx/AccessibilityManagerPro/releases/download/v7.0.3/AccessibilityManagerPro-v7.0.3.apk","size":1900535}]}]};
 
 const box = document.getElementById('repo-index');
 const countEl = document.getElementById('repo-count');
@@ -389,6 +407,12 @@ const LANG_COLORS = {
 const langColor = (lang) => LANG_COLORS[lang] || 'var(--dim)';
 
 const pad2 = (n) => (n < 10 ? '0' : '') + n;
+const fmtSize = (b) => {
+  if (!b || b < 0) return '';
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+  return (b / 1024 / 1024).toFixed(1) + ' MB';
+};
 const fmtAgo = (iso) => {
   const t = Date.parse(iso);
   if (isNaN(t)) return '—';
@@ -476,8 +500,10 @@ function skeletons(n) {
 function visible() {
   const q = state.q.trim().toLowerCase();
   let list = state.repos.filter((r) => {
-    if (state.filter === 'pages' && !r.has_pages) return false;
-    if (state.filter === 'repo' && r.has_pages) return false;
+    const isApp = !!RELEASES[r.name];
+    if (state.filter === 'pages' && (!r.has_pages || isApp)) return false;
+    if (state.filter === 'app' && !isApp) return false;
+    if (state.filter === 'repo' && (r.has_pages || isApp)) return false;
     if (!q) return true;
     return (r.name || '').toLowerCase().includes(q) ||
            (r.description || '').toLowerCase().includes(q) ||
@@ -499,18 +525,25 @@ function linkFor(repo) {
 
 function entry(repo, idx) {
   const target = linkFor(repo);
-  const a = make('a', 'entry');
+  const rels = RELEASES[repo.name] || null;
+  const wrap = make('div', 'entry');
+  wrap.style.setProperty('--i', Math.min(idx, 12));
+
+  const a = make('a', 'entry-main');
   a.href = target.href;
-  a.style.setProperty('--i', Math.min(idx, 12));
   if (target.pages) a.setAttribute('aria-label', repo.name + ' 站点');
 
-  const main = make('span', 'entry-main');
+  const row = make('div', 'entry-row');
+
+  const main = make('span', 'entry-main-inner');
   main.appendChild(make('span', 'entry-title', repo.name));
   main.appendChild(make('span', 'entry-desc', repo.description || '暂无描述'));
   a.appendChild(main);
+  row.appendChild(a);
 
   const right = make('span', 'entry-right');
-  if (target.pages) right.appendChild(make('span', 'tag site', '站点'));
+  if (rels) right.appendChild(make('span', 'tag app', '软件'));
+  else if (target.pages) right.appendChild(make('span', 'tag site', '站点'));
   if (repo.fork) right.appendChild(make('span', 'tag', 'Fork'));
   if (repo.archived) right.appendChild(make('span', 'tag', '已归档'));
   if (repo.language) {
@@ -562,8 +595,28 @@ function entry(repo, idx) {
   });
   right.appendChild(copy);
   right.appendChild(make('i', 'chev'));
-  a.appendChild(right);
-  return a;
+  row.appendChild(right);
+  wrap.appendChild(row);
+
+  if (rels) wrap.appendChild(versionRow(rels));
+  return wrap;
+}
+
+/* 版本行：版本号直接点击下载对应文件，首个为最新版本 */
+function versionRow(rels) {
+  const box = make('div', 'verrow');
+  box.appendChild(make('span', 'vlabel', '版本'));
+  rels.forEach((rel, i) => {
+    const asset = rel.assets[0];
+    const a = make('a', 'ver' + (i === 0 ? ' latest' : ''));
+    a.href = asset.url;
+    a.setAttribute('download', '');
+    a.title = rel.name + ' · ' + asset.name + (asset.size ? ' · ' + fmtSize(asset.size) : '');
+    a.appendChild(document.createTextNode(rel.tag));
+    if (asset.size) a.appendChild(make('span', 'vsize', fmtSize(asset.size)));
+    box.appendChild(a);
+  });
+  return box;
 }
 
 function fallbackCopy(text, done) {
@@ -603,10 +656,12 @@ function render() {
 }
 
 function stats(repos) {
-  const pages = repos.filter((r) => r.has_pages).length;
+  const apps = repos.filter((r) => RELEASES[r.name]).length;
+  const pages = repos.filter((r) => r.has_pages && !RELEASES[r.name]).length;
   document.getElementById('c-all').textContent = repos.length;
   document.getElementById('c-pages').textContent = pages;
-  document.getElementById('c-repo').textContent = repos.length - pages;
+  document.getElementById('c-app').textContent = apps;
+  document.getElementById('c-repo').textContent = repos.length - pages - apps;
 }
 
 /* 相对时间每分钟重算一次，避免长时间停留后时间停在旧值 */
@@ -673,7 +728,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-    const items = [...box.querySelectorAll('.entry')];
+    const items = [...box.querySelectorAll('.entry-main')];
     if (!items.length) return;
     if (!items.includes(document.activeElement) && !inField) {
       e.preventDefault();
