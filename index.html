@@ -348,8 +348,10 @@ const CACHE_KEY = 'rdtscx.repos.v1';
 const CACHE_TTL = 5 * 60 * 1000;         // 5 分钟内直接用缓存，后台静默刷新
 /* 软件类仓库的版本与直链下载：构建时预先从 GitHub Releases 拉取并内联，
    保证打开页面即可点击版本号直接下载对应 APK，不依赖额外 API 请求 */
-const RELEASES = {"sii-browser-backup":[{"tag":"v1.6.1","name":"Sii 1.6.1","date":"2026-11-17T06:44:58Z","assets":[{"name":"Sii-1.6.1-release.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.6.1/Sii-1.6.1-release.apk","size":34430233}]},{"tag":"v1.6.0","name":"Sii 1.6.0","date":"2026-11-16T04:57:52Z","assets":[{"name":"Sii-1.6.0-release.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.6.0/Sii-1.6.0-release.apk","size":34398941}]},{"tag":"v1.5.9","name":"Sii 1.5.9","date":"2026-11-16T04:57:58Z","assets":[{"name":"Sii-1.5.9.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.9/Sii-1.5.9.apk","size":34390061}]},{"tag":"v1.5.3","name":"Sii 1.5.3","date":"2026-11-07T04:49:32Z","assets":[{"name":"Sii-1.5.3.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.3/Sii-1.5.3.apk","size":21105450}]},{"tag":"v1.5.2","name":"Sii 1.5.2","date":"2026-11-06T05:19:49Z","assets":[{"name":"Sii-1.5.2.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.2/Sii-1.5.2.apk","size":21087438}]},{"tag":"v1.5.1","name":"Sii 1.5.1","date":"2026-11-05T08:25:40Z","assets":[{"name":"Sii-1.5.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.1/Sii-1.5.1.apk","size":21063762}]},{"tag":"v1.5.0","name":"Sii 1.5.0","date":"2026-11-05T08:25:46Z","assets":[{"name":"Sii-1.5.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.0/Sii-1.5.0.apk","size":21058690}]},{"tag":"v1.4.0","name":"Sii 1.4.0","date":"2026-11-02T15:30:30Z","assets":[{"name":"Sii-1.4.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.4.0/Sii-1.4.0.apk","size":21034346}]},{"tag":"v1.3.3","name":"Sii 1.3.3","date":"2026-11-05T08:25:52Z","assets":[{"name":"Sii-1.3.3.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.3/Sii-1.3.3.apk","size":20787615}]},{"tag":"v1.3.2","name":"Sii 1.3.2","date":"2026-11-05T08:25:57Z","assets":[{"name":"Sii-1.3.2.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.2/Sii-1.3.2.apk","size":20787735}]},{"tag":"v1.3.1","name":"Sii 1.3.1","date":"2026-11-05T08:26:02Z","assets":[{"name":"Sii-1.3.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.1/Sii-1.3.1.apk","size":20787987}]},{"tag":"v1.3.0","name":"Sii 1.3.0","date":"2026-11-05T08:26:08Z","assets":[{"name":"Sii-1.3.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.0/Sii-1.3.0.apk","size":20766995}]},{"tag":"v1.2.1","name":"Sii 1.2.1","date":"2026-11-05T08:26:14Z","assets":[{"name":"Sii-1.2.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.2.1/Sii-1.2.1.apk","size":20745791}]},{"tag":"v1.2.0","name":"Sii 1.2.0","date":"2026-11-05T08:26:19Z","assets":[{"name":"Sii-1.2.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.2.0/Sii-1.2.0.apk","size":20745491}]},{"tag":"v1.1.0","name":"Sii 1.1.0","date":"2026-11-05T08:26:25Z","assets":[{"name":"Sii-1.1.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.1.0/Sii-1.1.0.apk","size":20728715}]},{"tag":"v1.0.0","name":"Sii 1.0.0","date":"2026-11-05T08:26:30Z","assets":[{"name":"Sii-1.0.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.0.0/Sii-1.0.0.apk","size":20684959}]}],"AccessibilityManagerPro":[{"tag":"v7.0.3","name":"7.0.3 — 无障碍管理器Pro","date":"2026-11-05T10:03:18Z","assets":[{"name":"AccessibilityManagerPro-v7.0.3.apk","url":"https://github.com/rdtscx/AccessibilityManagerPro/releases/download/v7.0.3/AccessibilityManagerPro-v7.0.3.apk","size":1900535}]}]};
-
+/* SYNC:START — 由 scripts/sync.py 自动生成，请勿手改 */
+const RELEASES = {"sii-browser-backup":[{"tag":"v1.6.1","name":"Sii 1.6.1","date":"2026-11-17T06:44:58Z","assets":[{"name":"Sii-1.6.1-release.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.6.1/Sii-1.6.1-release.apk","size":34430233}]},{"tag":"v1.6.0","name":"Sii 1.6.0","date":"2026-11-16T04:57:52Z","assets":[{"name":"Sii-1.6.0-release.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.6.0/Sii-1.6.0-release.apk","size":34398941}]},{"tag":"v1.5.9","name":"Sii 1.5.9","date":"2026-11-16T04:57:58Z","assets":[{"name":"Sii-1.5.9.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.9/Sii-1.5.9.apk","size":34390061}]},{"tag":"v1.5.3","name":"Sii 1.5.3","date":"2026-11-07T04:49:32Z","assets":[{"name":"Sii-1.5.3.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.3/Sii-1.5.3.apk","size":21105450}]},{"tag":"v1.5.2","name":"Sii 1.5.2","date":"2026-11-06T05:19:49Z","assets":[{"name":"Sii-1.5.2.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.2/Sii-1.5.2.apk","size":21087438}]},{"tag":"v1.5.1","name":"Sii 1.5.1","date":"2026-11-05T08:25:40Z","assets":[{"name":"Sii-1.5.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.1/Sii-1.5.1.apk","size":21063762}]},{"tag":"v1.5.0","name":"Sii 1.5.0","date":"2026-11-05T08:25:46Z","assets":[{"name":"Sii-1.5.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.5.0/Sii-1.5.0.apk","size":21058690}]},{"tag":"v1.4.0","name":"Sii 1.4.0","date":"2026-11-02T15:30:30Z","assets":[{"name":"Sii-1.4.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.4.0/Sii-1.4.0.apk","size":21034346}]},{"tag":"v1.3.3","name":"Sii 1.3.3","date":"2026-11-05T08:25:52Z","assets":[{"name":"Sii-1.3.3.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.3/Sii-1.3.3.apk","size":20787615}]},{"tag":"v1.3.2","name":"Sii 1.3.2","date":"2026-11-05T08:25:57Z","assets":[{"name":"Sii-1.3.2.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.2/Sii-1.3.2.apk","size":20787735}]},{"tag":"v1.3.1","name":"Sii 1.3.1","date":"2026-11-05T08:26:02Z","assets":[{"name":"Sii-1.3.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.1/Sii-1.3.1.apk","size":20787987}]},{"tag":"v1.3.0","name":"Sii 1.3.0","date":"2026-11-05T08:26:08Z","assets":[{"name":"Sii-1.3.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.3.0/Sii-1.3.0.apk","size":20766995}]},{"tag":"v1.2.1","name":"Sii 1.2.1","date":"2026-11-05T08:26:14Z","assets":[{"name":"Sii-1.2.1.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.2.1/Sii-1.2.1.apk","size":20745791}]},{"tag":"v1.2.0","name":"Sii 1.2.0","date":"2026-11-05T08:26:19Z","assets":[{"name":"Sii-1.2.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.2.0/Sii-1.2.0.apk","size":20745491}]},{"tag":"v1.1.0","name":"Sii 1.1.0","date":"2026-11-05T08:26:25Z","assets":[{"name":"Sii-1.1.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.1.0/Sii-1.1.0.apk","size":20728715}]},{"tag":"v1.0.0","name":"Sii 1.0.0 ","date":"2026-11-05T08:26:30Z","assets":[{"name":"Sii-1.0.0.apk","url":"https://github.com/rdtscx/sii-browser-backup/releases/download/v1.0.0/Sii-1.0.0.apk","size":20684959}]}],"AccessibilityManagerPro":[{"tag":"v7.0.3","name":"7.0.3 — 无障碍管理器Pro","date":"2026-11-05T10:03:18Z","assets":[{"name":"AccessibilityManagerPro-v7.0.3.apk","url":"https://github.com/rdtscx/AccessibilityManagerPro/releases/download/v7.0.3/AccessibilityManagerPro-v7.0.3.apk","size":1900535}]}]};
+const EXTRA = [];
+/* SYNC:END */
 const box = document.getElementById('repo-index');
 const countEl = document.getElementById('repo-count');
 const qEl = document.getElementById('q');
@@ -480,6 +482,23 @@ async function fetchRepos() {
   return all.filter((r) => r.name.toLowerCase() !== USER + '.github.io');
 }
 
+/* 合并清单收录的外部条目：与账号仓库同名时以账号仓库为准 */
+function mergeExtra(repos) {
+  const names = new Set(repos.map((r) => r.name));
+  const extra = EXTRA.filter((e) => !names.has(e.name)).map((e) => ({
+    name: e.name,
+    description: e.description || '',
+    has_pages: true,
+    pushed_at: e.pushed_at || '',
+    stargazers_count: 0,
+    language: e.language || '',
+    fork: false,
+    archived: false,
+    ext_url: e.url || '',
+  }));
+  return repos.concat(extra);
+}
+
 /* ---------- 渲染 ---------- */
 function skeletons(n) {
   box.textContent = '';
@@ -519,7 +538,8 @@ function visible() {
 }
 
 function linkFor(repo) {
-  /* 统一指向该仓库对应的站点页面（/<repo>/），不判断是否已部署或能否访问 */
+  /* 清单收录的外部站点用 ext_url；账号仓库指向其站点页面（/<repo>/） */
+  if (repo.ext_url) return { href: repo.ext_url, label: repo.ext_url.replace(/^https?:\/\//, ''), pages: true };
   return { href: '/' + encodeURIComponent(repo.name) + '/', label: '/' + repo.name + '/', pages: repo.has_pages };
 }
 
@@ -785,7 +805,7 @@ async function start(force) {
     countEl.textContent = '加载中';
   }
   try {
-    const repos = await fetchRepos();
+    const repos = mergeExtra(await fetchRepos());
     state.repos = repos;
     writeCache(repos);
     stats(repos);
@@ -807,7 +827,7 @@ async function refresh() {
   if (Date.now() - lastFetch < 60 * 1000) return;   // 防抖，避免频繁切标签耗尽接口配额
   lastFetch = Date.now();
   try {
-    const repos = await fetchRepos();
+    const repos = mergeExtra(await fetchRepos());
     const sig = (list) => list.map((r) => r.name + ':' + r.pushed_at).join('|');
     if (sig(repos) === sig(state.repos)) { state.repos = repos; writeCache(repos); return; }
     state.repos = repos;
