@@ -134,7 +134,18 @@ def build():
         rs = releases_for(r['name'])
         if rs:
             pages[r['name']] = {'count': len(rs), 'latest': rs[0]['tag']}
-            print('  %-28s %d 个版本 → 映射页页尾下载区' % (r['name'], len(rs), r['name']))
+            print('  %-28s %d 个版本 → 映射页页尾下载区' % (r['name'], len(rs)))
+
+    snap = [{
+        'name': r['name'],
+        'description': r.get('description') or '',
+        'has_pages': bool(r.get('has_pages')),
+        'pushed_at': r.get('pushed_at') or '',
+        'stargazers_count': r.get('stargazers_count') or 0,
+        'language': r.get('language') or '',
+        'fork': bool(r.get('fork')),
+        'archived': bool(r.get('archived')),
+    } for r in repos]
 
     extra = []
     manifest = load_manifest()
@@ -158,7 +169,7 @@ def build():
     if extra:
         print('  清单收录 %d 个外部站点' % len(extra))
 
-    return pages, extra
+    return pages, extra, snap
 
 
 def dump_js(obj):
@@ -166,12 +177,12 @@ def dump_js(obj):
     return json.dumps(obj, ensure_ascii=False, separators=(',', ':'))
 
 
-def inject(pages, extra):
+def inject(pages, extra, snap):
     with open(INDEX, encoding='utf-8') as f:
         html = f.read()
 
-    block = '%s\nconst APPINFO = %s;\nconst EXTRA = %s;\n%s' % (
-        START_MARK, dump_js(pages), dump_js(extra), END_MARK)
+    block = '%s\nconst APPINFO = %s;\nconst EXTRA = %s;\nconst SNAPSHOT = %s;\n%s' % (
+        START_MARK, dump_js(pages), dump_js(extra), dump_js(snap), END_MARK)
 
     if START_MARK in html and END_MARK in html:
         html = re.sub(re.escape(START_MARK) + r'.*?' + re.escape(END_MARK),
@@ -193,8 +204,8 @@ def inject(pages, extra):
 
 
 def main():
-    pages, extra = build()
-    inject(pages, extra)
+    pages, extra, snap = build()
+    inject(pages, extra, snap)
 
 
 if __name__ == '__main__':
