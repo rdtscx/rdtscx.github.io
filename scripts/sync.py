@@ -4,7 +4,7 @@
 流程：
   1. 拉取 rdtscx 账号下全部公开仓库（分页）
   2. 拉取每个仓库的 Releases，只统计「版本数量 + 最新版本号」
-     （安装包直链一律放在各仓库的 /downloads.html 二级页，根站不出现下载直链）
+     （根站不出现下载直链，安装包一律在各仓库映射页页尾的下载区展示）
   3. 读取 sites.json 清单，合并外部站点条目
   4. 把 APPINFO（版本数量/最新版本号）/ EXTRA 注入 index.html 的标记块
 
@@ -134,7 +134,7 @@ def build():
         rs = releases_for(r['name'])
         if rs:
             pages[r['name']] = {'count': len(rs), 'latest': rs[0]['tag']}
-            print('  %-28s %d 个版本 → %s/downloads.html' % (r['name'], len(rs), r['name']))
+            print('  %-28s %d 个版本 → 映射页页尾下载区' % (r['name'], len(rs), r['name']))
 
     extra = []
     manifest = load_manifest()
