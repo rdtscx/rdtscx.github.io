@@ -3,9 +3,10 @@
 
 流程：
   1. 拉取 rdtscx 账号下全部公开仓库（分页）
-  2. 拉取每个仓库的 Releases，生成「软件版本 → 直链下载」数据
+  2. 拉取每个仓库的 Releases，只统计「版本数量 + 最新版本号」
+     （安装包直链一律放在各仓库的 /downloads.html 二级页，根站不出现下载直链）
   3. 读取 sites.json 清单，合并外部站点条目
-  4. 把 RELEASES / EXTRA 注入 index.html 的标记块
+  4. 把 DOWNLOAD_PAGES（版本数量/最新版本号）/ EXTRA 注入 index.html 的标记块
 
 用法：
   python3 scripts/sync.py                 # 生成并写回 index.html（本地/CI 均可）
@@ -128,12 +129,12 @@ def build():
     repos = list_repos()
     print('  共 %d 个公开仓库' % len(repos))
 
-    releases = {}
+    pages = {}
     for r in repos:
         rs = releases_for(r['name'])
         if rs:
-            releases[r['name']] = rs
-            print('  %-28s %d 个版本' % (r['name'], len(rs)))
+            pages[r['name']] = {'count': len(rs), 'latest': rs[0]['tag']}
+            print('  %-28s %d 个版本 → %s/downloads.html' % (r['name'], len(rs), r['name']))
 
     extra = []
     manifest = load_manifest()
@@ -157,7 +158,7 @@ def build():
     if extra:
         print('  清单收录 %d 个外部站点' % len(extra))
 
-    return releases, extra
+    return pages, extra
 
 
 def dump_js(obj):
@@ -165,24 +166,24 @@ def dump_js(obj):
     return json.dumps(obj, ensure_ascii=False, separators=(',', ':'))
 
 
-def inject(releases, extra):
+def inject(pages, extra):
     with open(INDEX, encoding='utf-8') as f:
         html = f.read()
 
-    block = '%s\nconst RELEASES = %s;\nconst EXTRA = %s;\n%s' % (
-        START_MARK, dump_js(releases), dump_js(extra), END_MARK)
+    block = '%s\nconst DOWNLOAD_PAGES = %s;\nconst EXTRA = %s;\n%s' % (
+        START_MARK, dump_js(pages), dump_js(extra), END_MARK)
 
     if START_MARK in html and END_MARK in html:
         html = re.sub(re.escape(START_MARK) + r'.*?' + re.escape(END_MARK),
                       lambda m: block, html, count=1, flags=re.S)
     else:
         # 首次迁移：把旧的两处常量包裹进标记块
-        html, n1 = re.subn(r'^const RELEASES = .*?;\s*$',
+        html, n1 = re.subn(r'^const (?:RELEASES|DOWNLOAD_PAGES) = .*?;\s*$',
                            lambda m: START_MARK, html, count=1, flags=re.M)
         html, n2 = re.subn(r'^(const EXTRA = .*?;\s*)$',
                            lambda m: m.group(1) + '\n' + END_MARK, html, count=1, flags=re.M)
         if not (n1 and n2):
-            sys.exit('迁移失败：index.html 中未同时找到 const RELEASES 与 const EXTRA 行')
+            sys.exit('迁移失败：index.html 中未同时找到 const DOWNLOAD_PAGES 与 const EXTRA 行')
         html = re.sub(re.escape(START_MARK) + r'.*?' + re.escape(END_MARK),
                       lambda m: block, html, count=1, flags=re.S)
 
@@ -192,8 +193,8 @@ def inject(releases, extra):
 
 
 def main():
-    releases, extra = build()
-    inject(releases, extra)
+    pages, extra = build()
+    inject(pages, extra)
 
 
 if __name__ == '__main__':
