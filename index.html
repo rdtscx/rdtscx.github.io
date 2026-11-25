@@ -328,6 +328,13 @@ html[data-theme="dark"] .toast{background:#e6ebf2;color:#11161d}
   </div>
 
   <div class="index" id="repo-index"></div>
+
+  <div class="sec-head" id="dl-head" hidden>
+    <h2>安装包下载</h2>
+    <span class="count" id="dl-count"></span>
+  </div>
+  <div class="index" id="dl-index" hidden></div>
+
   <noscript><div class="state">仓库索引需要启用 JavaScript，可直接访问 <a href="https://github.com/rdtscx?tab=repositories">GitHub 仓库列表</a>。</div></noscript>
   <p class="note">按 <kbd>/</kbd> 搜索，<kbd>↑</kbd><kbd>↓</kbd> 选择，<kbd>Enter</kbd> 打开；每个条目可一键复制链接。</p>
 
@@ -618,21 +625,7 @@ function entry(repo, idx) {
   row.appendChild(right);
   wrap.appendChild(row);
 
-  if (info) wrap.appendChild(downloadEntry(repo, info));
   return wrap;
-}
-
-/* 软件下载入口：只跳转到该仓库的二级下载页，不在本页列出任何版本与直链 */
-function downloadEntry(repo, info) {
-  const box = make('div', 'verrow');
-  box.appendChild(make('span', 'vlabel', '下载'));
-  const a = make('a', 'ver latest');
-  a.href = '/' + encodeURIComponent(repo.name) + '/downloads.html';
-  a.title = '打开 ' + repo.name + ' 的全部版本下载页';
-  a.appendChild(document.createTextNode('全部版本'));
-  if (info.count) a.appendChild(make('span', 'vsize', info.count + ' 个'));
-  box.appendChild(a);
-  return box;
 }
 
 function fallbackCopy(text, done) {
@@ -669,6 +662,41 @@ function render() {
   const frag = document.createDocumentFragment();
   list.forEach((repo, i) => frag.appendChild(entry(repo, i)));
   box.appendChild(frag);
+  renderDownloads(state.repos);
+}
+
+/* 页尾下载区：软件类仓库只给「全部版本下载页」入口，直链留在二级页 */
+function renderDownloads(repos) {
+  const box = document.getElementById('dl-index');
+  const head = document.getElementById('dl-head');
+  const cnt = document.getElementById('dl-count');
+  if (!box || !head) return;
+  const apps = repos.filter((r) => DOWNLOAD_PAGES[r.name]);
+  if (!apps.length) { head.hidden = true; box.hidden = true; return; }
+  head.hidden = false; box.hidden = false;
+  cnt.textContent = apps.length + ' 个软件';
+  box.textContent = '';
+  apps.forEach((repo, i) => {
+    const info = DOWNLOAD_PAGES[repo.name];
+    const wrap = make('div', 'entry');
+    wrap.style.setProperty('--i', i);
+    const row = make('div', 'entry-row');
+    const main = make('span', 'entry-main');
+    const inner = make('span', 'entry-main-inner');
+    inner.appendChild(make('span', 'entry-title', repo.name));
+    inner.appendChild(make('span', 'entry-desc', (repo.description || '软件安装包与历史版本')));
+    main.appendChild(inner);
+    row.appendChild(main);
+    const right = make('span', 'entry-right');
+    const a = make('a', 'ver latest', '全部版本');
+    a.href = '/' + encodeURIComponent(repo.name) + '/downloads.html';
+    a.title = '打开 ' + repo.name + ' 的全部版本下载页';
+    if (info.count) a.appendChild(make('span', 'vsize', info.count + ' 个'));
+    right.appendChild(a);
+    row.appendChild(right);
+    wrap.appendChild(row);
+    box.appendChild(wrap);
+  });
 }
 
 function stats(repos) {
