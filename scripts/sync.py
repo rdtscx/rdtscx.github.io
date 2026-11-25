@@ -6,7 +6,7 @@
   2. 拉取每个仓库的 Releases，只统计「版本数量 + 最新版本号」
      （安装包直链一律放在各仓库的 /downloads.html 二级页，根站不出现下载直链）
   3. 读取 sites.json 清单，合并外部站点条目
-  4. 把 DOWNLOAD_PAGES（版本数量/最新版本号）/ EXTRA 注入 index.html 的标记块
+  4. 把 APPINFO（版本数量/最新版本号）/ EXTRA 注入 index.html 的标记块
 
 用法：
   python3 scripts/sync.py                 # 生成并写回 index.html（本地/CI 均可）
@@ -170,7 +170,7 @@ def inject(pages, extra):
     with open(INDEX, encoding='utf-8') as f:
         html = f.read()
 
-    block = '%s\nconst DOWNLOAD_PAGES = %s;\nconst EXTRA = %s;\n%s' % (
+    block = '%s\nconst APPINFO = %s;\nconst EXTRA = %s;\n%s' % (
         START_MARK, dump_js(pages), dump_js(extra), END_MARK)
 
     if START_MARK in html and END_MARK in html:
@@ -178,12 +178,12 @@ def inject(pages, extra):
                       lambda m: block, html, count=1, flags=re.S)
     else:
         # 首次迁移：把旧的两处常量包裹进标记块
-        html, n1 = re.subn(r'^const (?:RELEASES|DOWNLOAD_PAGES) = .*?;\s*$',
+        html, n1 = re.subn(r'^const (?:RELEASES|DOWNLOAD_PAGES|APPINFO) = .*?;\s*$',
                            lambda m: START_MARK, html, count=1, flags=re.M)
         html, n2 = re.subn(r'^(const EXTRA = .*?;\s*)$',
                            lambda m: m.group(1) + '\n' + END_MARK, html, count=1, flags=re.M)
         if not (n1 and n2):
-            sys.exit('迁移失败：index.html 中未同时找到 const DOWNLOAD_PAGES 与 const EXTRA 行')
+            sys.exit('迁移失败：index.html 中未同时找到 const APPINFO 与 const EXTRA 行')
         html = re.sub(re.escape(START_MARK) + r'.*?' + re.escape(END_MARK),
                       lambda m: block, html, count=1, flags=re.S)
 
