@@ -364,9 +364,9 @@ const chipsEl = document.getElementById('chips');
 const topbar = document.getElementById('topbar');
 const linkDot = document.getElementById('linkStatus');
 
-const LINK_TEXT = { ok: '已连接仓库', err: '仓库连接断开', wait: '正在连接仓库' };
-const LINK_BG = { ok: '#16a34a', err: '#dc2626', wait: '' };
-const LINK_RING = { ok: '0 0 0 3px rgba(22,163,74,.16)', err: '0 0 0 3px rgba(220,38,38,.16)', wait: '' };
+const LINK_TEXT = { ok: '已连接仓库', snap: '使用本地快照', err: '仓库连接断开', wait: '正在连接仓库' };
+const LINK_BG = { ok: '#16a34a', snap: '#8d97a5', err: '#dc2626', wait: '' };
+const LINK_RING = { ok: '0 0 0 3px rgba(22,163,74,.16)', snap: '0 0 0 3px rgba(141,151,165,.16)', err: '0 0 0 3px rgba(220,38,38,.16)', wait: '' };
 function setLink(s) {
   if (!linkDot) return;
   linkDot.className = 'status ' + s;
@@ -458,7 +458,7 @@ function readCache() {
     if (!raw) return null;
     const obj = JSON.parse(raw);
     if (!obj || !Array.isArray(obj.repos) || !obj.ts) return null;
-    if (Date.now() - obj.ts > CACHE_TTL) return null;
+    // 缓存过期也先用于首屏渲染，接口刷新成功后再替换，避免断网时空白
     return obj.repos;
   } catch (e) { return null; }
 }
@@ -473,7 +473,16 @@ async function fetchRepos() {
   const all = [];
   let url = ENDPOINT;
   for (let page = 0; url && page < 10; page++) {
-    const res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 9000);
+    let res;
+    try {
+      res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' }, signal: ctl.signal });
+    } catch (e) {
+      throw new Error('接口不可达');
+    } finally {
+      clearTimeout(timer);
+    }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const batch = await res.json();
     if (!Array.isArray(batch)) throw new Error('响应格式异常');
@@ -777,13 +786,17 @@ function failure(err) {
 }
 
 async function start(force) {
-  setLink('wait');
   const cached = force ? null : readCache();
-  if (cached && cached.length) {
-    state.repos = cached;
-    stats(cached);
+  const snap = (typeof SNAPSHOT !== 'undefined' && SNAPSHOT.length) ? mergeExtra(SNAPSHOT) : null;
+  // 先用本地缓存或同步快照立刻出列表，接口只负责增量刷新
+  const seed = (cached && cached.length) ? cached : snap;
+  if (seed && seed.length) {
+    state.repos = seed;
+    stats(seed);
     render();
+    setLink(cached ? 'wait' : 'snap');
   } else {
+    setLink('wait');
     skeletons(4);
     countEl.textContent = '加载中';
   }
@@ -795,15 +808,13 @@ async function start(force) {
     render();
     setLink('ok');
   } catch (err) {
-    setLink('err');
-    if (cached) { toast('刷新失败，正在展示缓存'); return; }
-    if (typeof SNAPSHOT !== 'undefined' && SNAPSHOT.length) {
-      state.repos = mergeExtra(SNAPSHOT);
-      stats(state.repos);
-      render();
-      toast('GitHub 接口受限，展示最近一次同步的仓库列表');
+    if (state.repos.length) {
+      setLink('snap');
+      if (cached) toast('刷新失败，正在展示缓存');
+      else toast('GitHub 接口不可达，展示最近一次同步的仓库快照');
       return;
     }
+    setLink('err');
     failure(err);
   }
 }
@@ -825,7 +836,9 @@ async function refresh() {
     stats(repos);
     render();
     setLink('ok');
-  } catch (e) { /* 静默失败：保留当前列表 */ }
+  } catch (e) {
+    if (state.repos.length) setLink('snap');   // 保留当前列表，只把状态灯降级
+  }
 }
 setInterval(refresh, 5 * 60 * 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
