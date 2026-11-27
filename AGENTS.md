@@ -46,6 +46,7 @@
 - **禁止**任何形式的上游直链（`github.com/<upstream>/...`、F-Droid、Jenkins、Google Play 等第三方链接）。
 - 上游仓库被删除、改名、转为私有，本站下载都必须依然可用。
 - 页面不写“已完整镜像”“长期有效”“不使用上游链接”这类说明性长句，最多一句：`下面的文件全部托管在本仓库 Releases…`。
+- 页面内所有指向 GitHub 的链接必须写完整所有者：`https://github.com/rdtscx/<repo>/...`。禁止省略 `rdtscx/`（曾因 `/releases/tag/<tag>` 缺所有者导致全部关联链接 404）。
 
 ## 4. 视觉规范
 
@@ -58,6 +59,7 @@
 
 - 版本数量与最新版本号以**本仓库实际 Releases** 为准；页面数据与 Release 不一致时，先修数据再展示。
 - 根站 `scripts/sync.py` 在注入数据块时同时写入仓库列表快照 `SNAPSHOT`；GitHub API 被限流或不可达时，前端用快照兜底渲染，不出现空白页。
+- 根站首屏直接用本地缓存或 `SNAPSHOT` 渲染列表，GitHub API 只做后台增量刷新；接口失败时状态灯降级为「使用本地快照」，列表与链接不得消失。
 - 根站数据块位于 `index.html` 的 `/* SYNC:START … SYNC:END */` 标记内，**禁止手改该块内容**，只能由脚本生成。
 
 ## 6. 同步机制
@@ -67,6 +69,9 @@
 - 根站同一时刻（08:00 / 20:00）拉取各仓库 Releases，更新 `APPINFO`（版本数量、最新版本号）与仓库索引；有新版本时自动映射到对应映射页。
 - 镜像与重建不得覆盖站点自有文件：同步上游代码时排除 `index.html`、`scripts/`、`.github/`、本文件。
 - 推送使用 SSH 远端 `git@github.com:rdtscx/<repo>.git`；OAuth 令牌不含 `workflow` scope，无法通过 HTTPS 推送 workflow 文件。
+- 镜像的上游项目 `.gitignore` 常把 `scripts/` 列为忽略项，`scripts/build_downloads.py` 必须 `git add -f` 强制入库；CI 的刷新步骤会先校验该文件存在，缺失即失败退出。
+- 镜像 tag 只增不删：用 `git fetch --no-tags --force upstream '+refs/tags/*:refs/tags/*'` 对齐本地，再只推送远端缺失的 tag，避免上游重打同版本 tag 导致 `would clobber existing tag` 直接中断。
+- 上游改名时（如 `wanwuwww/Sii` → `wanwuwww/Sii-Browser`），需同步更新 workflow 的 `UPSTREAM_REPO`、`scripts/build_downloads.py` 的 `up` 字段与仓库简介链接。
 
 ## 7. 新增备份站接入清单
 
