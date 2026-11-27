@@ -110,7 +110,7 @@
 ### 7.3 工作流要求
 
 - workflow 的第一个 job 必须是 `resolve-upstream`；后续 job 通过 `needs.resolve-upstream.outputs.repo` / `.branch` 取上游名与分支，**禁止**在工作流里写死上游。
-- 模板：`scripts/templates/sync-upstream.yml`，复制后只需补 `upstream.json`，代码与 Release 镜像、tag 只增、页尾重建均已内置。
+- 模板：`scripts/templates/sync-upstream.yml` + `scripts/templates/upstream.example.json`，复制后填好真实上游即可，代码与 Release 镜像、tag 只增、页尾重建均已内置。
 - 引用型站点：从模板删掉 `mirror-code` / `mirror-releases`，保留 `resolve-upstream` 与 `refresh-downloads`。
 - 同步时排除 `upstream.json` 与 `scripts/`，避免被上游文件覆盖。
 - 上游解析成功但代码拉取失败必须 `::error::` 并以非零退出，禁止只留 `::warning::` 静默跳过（曾因分支写错 `main`，`shurufa` 连续多日「同步成功」但镜像步骤一直跳过）。

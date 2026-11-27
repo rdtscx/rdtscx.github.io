@@ -1,0 +1,8 @@
+{
+  "repo": "owner/upstream-repo",
+  "branch": "auto",
+  "mode": "mirror",
+  "aliases": [],
+  "resolved_at": "",
+  "history": []
+}
