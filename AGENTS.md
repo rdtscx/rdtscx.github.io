@@ -73,9 +73,58 @@
 - 镜像 tag 只增不删：用 `git fetch --no-tags --force upstream '+refs/tags/*:refs/tags/*'` 对齐本地，再只推送远端缺失的 tag，避免上游重打同版本 tag 导致 `would clobber existing tag` 直接中断。
 - 上游改名时（如 `wanwuwww/Sii` → `wanwuwww/Sii-Browser`），需同步更新 workflow 的 `UPSTREAM_REPO`、`scripts/build_downloads.py` 的 `up` 字段与仓库简介链接。
 
-## 7. 新增备份站接入清单
+## 7. 上游跟随（强制，备份站与引用型站点同时适用）
+
+上游仓库改名、迁移组织、默认分支从 `main` 改 `master` 时，本站必须自动跟上，不允许人工改 workflow 才算修好；旧名被他人占用后 GitHub 的 301 重定向会失效，写死上游名等于定时炸弹。
+
+### 7.1 上游关系登记
+
+- 每个存在上游的仓库（备份站、镜像站、引用型站点）根目录必须有 `upstream.json`：
+
+```json
+{
+  "repo": "wanwuwww/Sii-Browser",
+  "branch": "auto",
+  "mode": "mirror",
+  "aliases": ["wanwuwww/Sii"],
+  "resolved_at": "2026-11-27T10:45:56Z",
+  "history": [{"from": "wanwuwww/Sii", "to": "wanwuwww/Sii-Browser", "at": "2026-11-27T10:45:56Z"}]
+}
+```
+
+- `branch` 固定写 `auto`（跟随上游默认分支），**禁止**硬编码 `main` / `master`。
+- `mode` 取 `mirror`（镜像代码与 Release）或 `reference`（只维护引用与页脚上游链接，不镜像代码）。
+- `aliases` 由脚本自动累积历史名，勿手删；`history` 保留最近 12 次改名记录。
+- 没有上游关系的自建站点（`tariff`、`arpu`、`tc`、`fp` 等）不需要 `upstream.json`，其余规则不受影响。
+
+### 7.2 解析脚本
+
+- 仓库根 `scripts/resolve_upstream.py`，以根站同名文件为准（新增仓库直接复制，勿各自改写）。
+- 每次同步先跑 `python3 scripts/resolve_upstream.py --apply --repo-name "${GITHUB_REPOSITORY#*/}"`，由它：
+  1. 用 `gh api repos/<upstream>` 拿到真实 `full_name` 与 `default_branch`（GitHub 会跟随改名 301）；
+  2. 当前名 404 时回退 `aliases` 逐个探活，找回改名后的仓库；
+  3. 改名时回写 `upstream.json`（含别名与历史）、`scripts/build_downloads.py` 里对应仓库的 `up` 字段、仓库简介中的上游地址；
+  4. 输出 `repo` / `branch` / `status` / `renamed` 四个 Actions 输出。
+- 上游彻底删除或转私有时输出 `status=missing`，流程跳过镜像、保留本地已有内容，页面照常可用。
+
+### 7.3 工作流要求
+
+- workflow 的第一个 job 必须是 `resolve-upstream`；后续 job 通过 `needs.resolve-upstream.outputs.repo` / `.branch` 取上游名与分支，**禁止**在工作流里写死上游。
+- 模板：`scripts/templates/sync-upstream.yml`，复制后只需补 `upstream.json`，代码与 Release 镜像、tag 只增、页尾重建均已内置。
+- 引用型站点：从模板删掉 `mirror-code` / `mirror-releases`，保留 `resolve-upstream` 与 `refresh-downloads`。
+- 同步时排除 `upstream.json` 与 `scripts/`，避免被上游文件覆盖。
+- 上游解析成功但代码拉取失败必须 `::error::` 并以非零退出，禁止只留 `::warning::` 静默跳过（曾因分支写错 `main`，`shurufa` 连续多日「同步成功」但镜像步骤一直跳过）。
+
+### 7.4 改名演练（验收方式）
+
+1. 把 `upstream.json` 的 `repo` 改回旧名（如 `wanwuwww/Sii`），清空 `aliases`；
+2. 手动触发 `sync-upstream`；
+3. 确认 run 成功、`upstream.json` 已回写新名、`aliases` 含旧名、`build_downloads.py` 的 `up` 已更新、页面页脚上游链接指向新地址。
+
+## 8. 新增备份站接入清单
 
 1. 新建或复用 `rdtscx/<repo>`，开启 Pages（legacy，`main` 分支根目录）。
+2. 登记 `upstream.json`（`repo`、`branch: auto`、`mode: mirror|reference`），放入 `scripts/resolve_upstream.py` 与 `scripts/templates/sync-upstream.yml`；无上游的自建站点跳过此步。
 2. 克隆上游全部 Release 资产到本仓库 Releases（只增不删，失败重试，幂等跳过已存在资产）。
 3. 复制 `scripts/build_downloads.py`，在 `APPS` 字典登记 `title`、`up`（上游全名）、`group`（是否多插件）。
 4. 编写映射页 `index.html`：项目介绍（定位、能力、安装要求、来源说明）+ 页尾 `<!-- DLX:START -->…<!-- DLX:END -->` 下载区。
@@ -84,13 +133,13 @@
 7. 在根站登记：运行 `GITHUB_TOKEN=... python3 scripts/sync.py`，确认 `APPINFO` 出现该仓库的 `count`/`latest`。
 8. 线上验收：映射页命中 `id="download"`，版本数与 Release 数一致，页面无上游下载链接。
 
-## 8. 文案与事实
+## 9. 文案与事实
 
 - 页面只写可从仓库事实核实的内容（包名、ABI、许可证、端点、版本号）；不确定信息标【待确认】，不编造。
 - 介绍页结构建议：一句话定位 → 解决什么问题 → 主要能力 → 安装/使用 → 文档 → 页尾下载区。
 - 不写空洞客套话，不堆叠营销形容词。
 
-## 9. 脚本与技术索引
+## 10. 脚本与技术索引
 
 | 文件 | 作用 |
 | --- | --- |
@@ -98,13 +147,16 @@
 | 根站 `index.html` | 仓库索引页；数据块由脚本注入 |
 | 各仓库 `scripts/build_downloads.py` | 生成本仓库页尾下载区并注入 `index.html` |
 | 各仓库 `index.html` | 映射页正文；`DLX` 标记块由脚本维护 |
-| 各仓库 `.github/workflows/sync-upstream.yml` | 双 cron 同步 + 重建 + 推送 |
+| 各仓库 `.github/workflows/sync-upstream.yml` | 双 cron：先跟随上游 → 镜像 → 重建 → 推送 |
+| 各仓库 `upstream.json` | 上游关系登记（真实全名、auto 分支、历史别名） |
+| 各仓库 `scripts/resolve_upstream.py` | 跟随上游改名与默认分支变更，回写配置 |
+| `scripts/templates/sync-upstream.yml` | 新仓库接入模板（备份站与引用型站点通用） |
 | 根站 `sites.json` | 站外条目清单（可选） |
 
 - 数据来源统一为 `https://api.github.com/repos/rdtscx/<repo>/releases?per_page=100`，只统计已发布、非草稿、非预发布版本。
 - 生成脚本仅依赖 Python 标准库与 `gh` CLI（本地镜像、发布资产时使用）。
 
-## 10. 验收清单
+## 11. 验收清单
 
 - [ ] 根站无下载直链、无版本体积清单。
 - [ ] 映射页下载区在页尾，`id="download"` 存在。
@@ -113,4 +165,5 @@
 - [ ] 所有下载地址指向 `rdtscx` 自有仓库。
 - [ ] 页面风格与根站一致，深浅色正常。
 - [ ] 双 cron 工作流存在，且不会覆盖站点自有文件。
+- [ ] `upstream.json` 存在、`branch` 为 `auto`，workflow 未写死上游名；按 7.4 演练过一次改名跟随。
 - [ ] 根站 `APPINFO` 含该仓库 `count`/`latest`。

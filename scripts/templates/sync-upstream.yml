@@ -1,0 +1,180 @@
+# 上游同步模板：任何有上游关系的仓库（备份站 / 引用型站点）复制本文件即可
+#
+# 前置条件（缺一不可）：
+#   1. upstream.json            —— 上游关系登记，branch 固定写 auto
+#   2. scripts/resolve_upstream.py —— 跟随改名与默认分支变更
+#   3. scripts/build_downloads.py  —— 页尾下载区生成（引用型站点可不用）
+#
+# 已适用：sii-browser-backup、Android-AI-gateway、shurufa
+# 引用型站点（mode=reference，只维护页脚上游链接、不镜像代码）删除 mirror-code / mirror-releases 两个 job，
+# 保留 resolve-upstream 与 refresh-downloads 即可。
+
+name: sync-upstream
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # 08:00（北京时间）
+    - cron: "0 12 * * *"  # 20:00（北京时间）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  resolve-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      repo: ${{ steps.r.outputs.repo }}
+      branch: ${{ steps.r.outputs.branch }}
+      status: ${{ steps.r.outputs.status }}
+      renamed: ${{ steps.r.outputs.renamed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 跟随上游：解析真实仓库名与默认分支
+        id: r
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/resolve_upstream.py --apply --repo-name "${GITHUB_REPOSITORY#*/}"
+
+      - name: 回写上游关系变更
+        run: |
+          set -euo pipefail
+          git config user.name "upstream-follow-bot"
+          git config user.email "upstream-follow-bot@users.noreply.github.com"
+          git add upstream.json scripts/build_downloads.py
+          if git diff --cached --quiet; then
+            echo "上游关系无变化"
+          else
+            git commit -m "chore: 跟随上游变更 $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push origin HEAD:main
+          fi
+
+  mirror-code:
+    needs: resolve-upstream
+    if: needs.resolve-upstream.outputs.status == 'ok'
+    env:
+      UPSTREAM_REPO: ${{ needs.resolve-upstream.outputs.repo }}
+      UPSTREAM_BRANCH: ${{ needs.resolve-upstream.outputs.branch }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+
+      - name: Keep schedule alive
+        run: |
+          last="$(git log -1 --format=%ct)"
+          if [ $(( $(date +%s) - last )) -gt $(( 40 * 86400 )) ]; then
+            date -u +"%Y-%m-%dT%H:%M:%SZ" > .sync-heartbeat
+            git add .sync-heartbeat
+            git commit -m "chore: 心跳提交，避免定时任务被停用"
+          fi
+
+      - name: Fetch upstream
+        id: upstream
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" 2>/dev/null || true
+          for i in 1 2 3; do
+            if git fetch --no-tags upstream "${UPSTREAM_BRANCH}"; then
+              echo "sha=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::上游 ${UPSTREAM_REPO} 已解析但代码拉取失败，请检查分支或网络"
+          exit 1
+
+      - name: Mirror files add-only
+        run: |
+          git checkout "${{ steps.upstream.outputs.sha }}" -- . \
+            ':(exclude).github' ':(exclude)index.html' ':(exclude)scripts' ':(exclude)upstream.json'
+          git reset -q HEAD -- .github
+          git checkout HEAD -- .github
+          git clean -fdq .github
+          git diff --cached --quiet || git commit -m "sync: ${UPSTREAM_REPO}@$(git rev-parse --short ${{ steps.upstream.outputs.sha }})"
+
+      - name: Push
+        run: git push origin "HEAD:main"
+
+      - name: Mirror tags add-only
+        run: |
+          git fetch --no-tags --force upstream '+refs/tags/*:refs/tags/*'
+          git ls-remote --tags origin | cut -f2 > /tmp/remote-tags
+          for tag in $(git tag); do
+            grep -qx "refs/tags/${tag}" /tmp/remote-tags || git push origin "refs/tags/${tag}" || true
+          done
+
+  mirror-releases:
+    needs: [resolve-upstream, mirror-code]
+    env:
+      UPSTREAM_REPO: ${{ needs.resolve-upstream.outputs.repo }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror releases and assets add-only
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          up="${UPSTREAM_REPO}"
+          ours="${GITHUB_REPOSITORY}"
+          tmp="$(mktemp -d)"
+          if ! tags="$(gh api "repos/${up}/releases" --paginate --jq '.[] | select(.draft == false) | .tag_name')"; then
+            echo "::warning::上游 ${up} 的 Release 列表不可用，本次跳过"
+            exit 0
+          fi
+          for tag in ${tags}; do
+            echo "== ${tag}"
+            if ! gh release view "${tag}" --repo "${ours}" > /dev/null 2>&1; then
+              gh release view "${tag}" --repo "${up}" --json body --jq '.body // ""' > "${tmp}/body.md"
+              title="$(gh release view "${tag}" --repo "${up}" --json name --jq '.name // ""')"
+              [ -n "${title}" ] || title="${tag}"
+              gh release create "${tag}" --repo "${ours}" --title "${title}" --notes-file "${tmp}/body.md" --target main
+            fi
+            ours_assets="$(gh release view "${tag}" --repo "${ours}" --json assets --jq '.assets[].name')"
+            up_assets="$(gh release view "${tag}" --repo "${up}" --json assets --jq '.assets[].name')"
+            for name in ${up_assets}; do
+              if printf '%s\n' "${ours_assets}" | grep -qxF "${name}"; then
+                continue
+              fi
+              gh release download "${tag}" --repo "${up}" --pattern "${name}" --dir "${tmp}/dl"
+              gh release upload "${tag}" "${tmp}/dl/${name}" --repo "${ours}"
+            done
+          done
+
+  refresh-downloads:
+    needs: mirror-releases
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 刷新映射页页尾下载区
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+          if [ ! -f scripts/build_downloads.py ]; then
+            echo "::error::缺少 scripts/build_downloads.py，下载区无法重建"
+            exit 1
+          fi
+          python3 scripts/build_downloads.py
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "下载区块无变化"
+          else
+            git commit -m "chore: 按最新 Release 重建页尾下载区块 $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push origin HEAD:main
+          fi
